@@ -1,10 +1,18 @@
 .data
+
+# NOMES DOS ARQUIVOS --------------------------------------------------------------------------------------- 
 usersFile:  .asciiz "users.txt"
 booksFile:  .asciiz "books.txt"
 
+# MENSAGENS PADROES ----------------------------------------------------------------------------------------
 msgMain: .asciiz "Bem vindo/a a livraria da Rural\n\nInforme sua matricula:"
+msgMenu: .asciiz "1- Livros\n2- Usuarios"
+msgMatriculaNaoEncontrada: .asciiz "Numero de matricula não encontrada, escreva novamente"
 
-buffer:     .space 256   
+# BUFFERS --------------------------------------------------------------------------------------------------
+bufferUser:  .space 100    #verificar se esse numero não esta sendo mais que o suficiente (exagero)
+bufferLinha: .space 40    #verificar se esse numero é o suficiente
+bufferByte: .space 1
                        
 backspace:  .byte 0x08    
 space:      .byte 0x20   # espaço em branco 
@@ -13,16 +21,142 @@ space:      .byte 0x20   # espaço em branco
 .globl main
 
 main:
+	li $s0, 0   		# indice do bufferUser
+	li $s1, 0		# indice do bufferLinha
+	
+	#Mensagem de bem vindo e numero de matricua
 	la $a0, msgMain
-	jal showMsgmain
+	jal showMsg
+	
+	#Numero de matricula do Usuario
+	jal verificarMatricula
 	jal cleardDisplay
+	
+	#Mensagem de menu
+	la $a0, msgMenu
+	jal showMsg
+	
+	#Resposta do Usuario
+	jal inputUser
 
-	# Inicializa ponteiro do buffer
-	la $s0, buffer
-	li $s1, 0   # Índice do buffer
+#Antes de usar tem que colocar o nome do arquivo em $a0 
+leitura: 
+	li $v0, 13                   # abrir arquivo           
+	li $a1, 0                    # 0 = read
+	li $a2, 0                    # permissões
+	syscall
+	move $s0, $v0                # descritor do arquivo
+	j return
+	
+loopLeituraPorByte:
 
-return:
-	jr $ra
+	li $v0, 14                   			  # syscall para leitura
+	move $a0, $s0                			  # descritor do arquivo
+	la $a1, bufferByte             			  # buffer 
+	li $a2, 1                    	  		  #  1 byte por vez
+	syscall
+	move $t0, $v0               	 		  # numero de bytes lidos (0 == fim do arquivo)
+	
+	beqz $t0, return  	  # se for fim do arquivo (preciso verificar se tem quebra de linha antes do fim do arquivo)
+
+	lb $t2, 0($a1)               	   		  # Carregar caractere lido
+	li $t3, 0x0A 
+	beq $t2, $t3, return    # verifica a quebra de linha 
+	
+	sb $t2, bufferLinha($s1)     			  # Salva o caractere na linha
+	addi $s1, $s1, 1             			  # +1 indice bufferLinha
+	j loopLeituraPorByte                		  # Continua lendo o próximo caractere
+
+verificarMatricula:
+	addi $sp, $sp, -4     	     # referencia ao chamador
+    	sw $ra, 0($sp)         	
+
+	jal inputUser           #input user (salvo no bufferUser, indice -> $s0)
+	
+	j loopVerificarMatricula
+	
+	lw $ra, 0($sp) 		     # restaura $ra após a chamada
+   	addi $sp, $sp, 4       
+   	
+   	j return
+loopVerificarMatricula:
+	addi $sp, $sp, -4     	     # referencia ao chamador
+    	sw $ra, 0($sp)   
+    	
+    	la $a0, usersFile            # arquivo
+	jal leitura
+	jal loopLeituraPorByte
+	
+	lw $ra, 0($sp) 		     # restaura $ra após a chamada
+   	addi $sp, $sp, 4       
+   	
+   	j return
+   	
+saveData:
+# Parametro 
+# $a0 -> nome do arquivo 
+# $a0 -> endereço da string -> $t0
+# $a0 -> tamanho da string ->  $t1
+
+	move $t0, $a1        #remediar a sobrescrita dos registradores
+	move $t1, $a2 
+
+	li $v0, 13           # abrir arquivo
+	li $a1, 9            # append
+	li $a2, 0            # permissoes 
+	syscall
+	move $s0, $v0        # descritor do arquivo
+
+	# Escrita no arquivo
+	li $v0, 15           # Código da syscall para escrita
+	move $a0, $s0        # Descritor do arquivo
+	move $a1, $t0        
+	move $a2, $t1        
+	li $a2, 22           # Tamanho da string (deve estar correto)
+	syscall
+	
+	j closeFile
+
+closeFile:
+	li $v0, 16
+	move $a0, $s0
+	syscall
+	j return
+
+# FUNCOES SIMPLES MUITO USADAS --------------------------------------------------------------------------------------------------------------------
+
+inputUser:
+	li $t0, 0xFFFF0000         # endereço do keyboard status
+	lw $t1, 0($t0)             # status do teclado, bit menos significativo = 0 -> sem caracter indisponivel
+	andi $t1, $t1, 1           # operação AND para verificar o bit menos significativo
+	beq $t1, $zero, inputUser     
+
+	# le caractere do teclado
+	li $t0, 0xFFFF0004         # endereço do keyboard data
+	lw $a0, 0($t0)             # carrega o caracter
+	li $t2, 0x0A 		   # Enter
+	beq $a0, $t2, return
+	sb $a0, bufferUser($s0)    # salva no buffer
+	addi $s0, $s0, 1	   # +1 indice bufferUser
+	j inputUser
+
+# Parametro $a0 -> mensagem
+showMsg:
+	lb $t0, 0($a0)		  #caractere
+	beqz $t0, return	  #verifica se terminou
+	li $t1, 0xFFFF0008        # endereço do display status
+	j loopDisplaymsg    	  #loop escrita
+	
+loopDisplaymsg:
+	lw $t2, 0($t1)           # status do display
+	andi $t2, $t2, 1         
+	beq $t2, $zero, loopDisplaymsg  # se ocupado, espera
+
+	li $t1, 0xFFFF000C       # endereço do display data
+	sw $t0, 0($t1)           # escreve
+
+	addi $a0, $a0, 1  	 # próximo caractere
+	j showMsg     
 
 cleardDisplay:
 	li $t3, 25       	 # linhas em branco (contador)
@@ -42,47 +176,7 @@ clearLoop:
 	subi $t3, $t3, 1           # -1 contador
 	bgtz $t3, clearLoop        # Repete até o contador chegar a 0
 
- 	jr $ra           
-	
-showMsgmain:
-	lb $t0, 0($a0)		#caractere
-	beqz $t0, return	#verifica se terminou
-	li $t1, 0xFFFF0008      # endereço do display status
-	j loopDisplaymsgMain    #loop escrita
-	
-loopDisplaymsgMain:
-	lw $t2, 0($t1)           # status do display
-	andi $t2, $t2, 1         
-	beq $t2, $zero, loopDisplaymsgMain  # se ocupado, espera
+ 	jr $ra        
 
-	li $t1, 0xFFFF000C       # endereço do display data
-	sw $t0, 0($t1)           # escreve
-
-	addi $a0, $a0, 1  # próximo caractere
-	j showMsgmain     
-
-
-
-saveData:
-	li $v0, 13           # abrir
-	la $a0, usersFile     
-	li $a1, 9            # append
-	li $a2, 0            # permissões (não usadas no MARS)
-	syscall
-	move $s0, $v0        # descritor do arquivo
-
-	# Escrita
-	li $v0, 15           # escrever
-	move $a0, $s0        # descritor do arquivo
-	la $a1, backspace      # endereço da string a ser escrita
-	li $a2, 22           # tamanho da string
-	syscall
-
-	# Fecha o arquivo
-	li $v0, 16
-	move $a0, $s0
-	syscall
-
-	# **Encerrar o programa**
-	li $v0, 10
-	syscall
+return:
+	jr $ra
