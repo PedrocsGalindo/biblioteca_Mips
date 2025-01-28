@@ -1,0 +1,88 @@
+.data
+usersFile:  .asciiz "users.txt"
+booksFile:  .asciiz "books.txt"
+
+msgMain: .asciiz "Bem vindo/a a livraria da Rural\n\nInforme sua matricula:"
+
+buffer:     .space 256   
+                       
+backspace:  .byte 0x08    
+space:      .byte 0x20   # espaço em branco 
+
+.text
+.globl main
+
+main:
+	la $a0, msgMain
+	jal showMsgmain
+	jal cleardDisplay
+
+	# Inicializa ponteiro do buffer
+	la $s0, buffer
+	li $s1, 0   # Índice do buffer
+
+return:
+	jr $ra
+
+cleardDisplay:
+	li $t3, 25       	 # linhas em branco (contador)
+	j clearLoop
+	
+
+clearLoop:
+	li $t1, 0xFFFF0008         # endereço do display status
+	lw $t2, 0($t1)             # status do display
+	andi $t2, $t2, 1
+	beq $t2, $zero, clearLoop  # se ocupado, espera
+	li $t1, 0xFFFF000C         # endereço do display data
+	
+
+	li $a0, 0x0A               # pula linha
+	sw $a0, 0($t1)             # escreve
+	subi $t3, $t3, 1           # -1 contador
+	bgtz $t3, clearLoop        # Repete até o contador chegar a 0
+
+ 	jr $ra           
+	
+showMsgmain:
+	lb $t0, 0($a0)		#caractere
+	beqz $t0, return	#verifica se terminou
+	li $t1, 0xFFFF0008      # endereço do display status
+	j loopDisplaymsgMain    #loop escrita
+	
+loopDisplaymsgMain:
+	lw $t2, 0($t1)           # status do display
+	andi $t2, $t2, 1         
+	beq $t2, $zero, loopDisplaymsgMain  # se ocupado, espera
+
+	li $t1, 0xFFFF000C       # endereço do display data
+	sw $t0, 0($t1)           # escreve
+
+	addi $a0, $a0, 1  # próximo caractere
+	j showMsgmain     
+
+
+
+saveData:
+	li $v0, 13           # abrir
+	la $a0, usersFile     
+	li $a1, 9            # append
+	li $a2, 0            # permissões (não usadas no MARS)
+	syscall
+	move $s0, $v0        # descritor do arquivo
+
+	# Escrita
+	li $v0, 15           # escrever
+	move $a0, $s0        # descritor do arquivo
+	la $a1, backspace      # endereço da string a ser escrita
+	li $a2, 22           # tamanho da string
+	syscall
+
+	# Fecha o arquivo
+	li $v0, 16
+	move $a0, $s0
+	syscall
+
+	# **Encerrar o programa**
+	li $v0, 10
+	syscall
