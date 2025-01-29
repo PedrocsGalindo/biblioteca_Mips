@@ -9,8 +9,8 @@ msgMain: .asciiz "Bem vindo/a a livraria da Rural\n\nInforme sua matricula:\n\n"
 msgMenu: .asciiz "1- Livros\n2- Usuarios"
 msgMatriculaNaoEncontrada: .asciiz "Numero de matricula não encontrada, escreva novamente\n"
 msgNameUser: .asciiz "Qual o nome do Estudante\n"
-msgRegistrationCode: .asciiz "Qual o numero de matricula\n"
-msgCourseUser: .asciiz "Qual o curso do Estudante\n"
+msgRegistrationCode: .asciiz "\nQual o numero de matricula\n"
+msgCourseUser: .asciiz "\nQual o curso do Estudante\n"
 
 # BUFFERS --------------------------------------------------------------------------------------------------
 bufferUser:  .space 100    #verificar se esse numero não esta sendo mais que o suficiente (exagero)
@@ -25,10 +25,11 @@ space:      .byte 0x20     # espaço em branco
 
 # REGISTRADORES FIXOS ----------------------------------------------------------------------------------------
 # Sempre que for usar os registradores fixos é necessario varificar se vai alterar algum outro valor, ou caso va usar alguma função que tenha esses registradores (necessario manter uma copia temporaria)
+# Caso necessario antes do input tem que salvar o valor de $a0 
 
 # $s0 : indice do bufferUser, indice do bufferUser(inputUser), 
 # $s1 : indice do bufferLinha
-# $a0 : buffer(clearBuffer), buffer(commaInBuffer), arquivo(saveData), mensagem(showMsg), contador(cleardDisplay)
+# $a0 : buffer(clearBuffer), buffer(commaInBuffer), arquivo(saveData), mensagem(showMsg), contador(cleardDisplay), caracterEscrito(inputUser)
 # $a1 : indice(clearBuffer), indice(commaInBuffer), buffer(saveData) 
 # $a2 : tamanhoString(saveData) 
 main:
@@ -69,10 +70,13 @@ creatUser:
 	
 	move $s0, $a1		     # Atualiza o indice do buffer
 	
+	la $a0, bufferUser
+	move $a1, $s0
+	jal showBuffer
+	
 	la $a0, usersFile	     # parametros da função -> arquivo(saveData) 
 	la $a1, bufferUser	     # parametros da função -> buffer(saveData) 
 	move $a2, $s0	 	     # parametros da função -> tamanhoString(saveData) 
-	
 	jal saveData
 	
 	la $a0, bufferUser	      # parametros da função -> buffer(clearBuffer)
@@ -84,6 +88,34 @@ creatUser:
 	addi $sp, $sp, 4    
 	
 	j return
+
+showBuffer:
+# Parâmetros
+# $a0 -> buffer
+# $a1 -> indice
+	addi $sp, $sp, -4   
+	sw $ra, 0($sp)     	     # salvar referencia
+	
+	move $t0, $a0
+	
+	jal loopshowBuffer
+	
+	move $a0, $t0
+	lw $ra, 0($sp)       	     # recupera referencia do chamdaor
+	addi $sp, $sp, 4    
+	
+	j return
+	
+loopshowBuffer:
+	beqz $a1, return    # Se o índice for 0, termina a exibição
+	move $t1, $a0
+	lb $a0, 0($t1)      # caractere do buffer
+	li $v0, 11          # imprimir caractere
+	syscall
+	move $a0, $t1
+	addi $a0, $a0, 1    # Avança para o próximo caractere
+	subi $a1, $a1, 1    # Decrementa o contador
+	j loopshowBuffer       # Continua a exibição
 
 saveData:
 # Parâmetros
@@ -160,13 +192,24 @@ inputUser:
 
 	# le caractere do teclado
 	li $t0, 0xFFFF0004         # endereço do keyboard data
-	lw $t2, 0($t0)             # carrega o caracter
+	lw $a0, 0($t0)             # carrega o caracter
 	li $t3, 0x0A 		   # Enter
-	beq $t2, $t3, return
-	sb $t2, bufferUser($s0)    # salva no buffer
+	beq $a0, $t3, return
+	la $t0, bufferUser 
+	add $t0, $t0, $s0
+	sb $t2, 0($t0)   	    # salva no buffer
 	addi $s0, $s0, 1	   # +1 indice bufferUser
-	j inputUser
+	j loopDisplay
 	
+loopDisplay:
+	li $t0, 0xFFFF0008       # endereço do display status
+	lw $t1, 0($t0)           # status do Display, bit menos significativo = 0 -> display indisponivel
+	andi $t1, $t1, 1         
+	beq $t1, $zero, loopDisplay
+
+	li $t0, 0xFFFF000C       # endereço do display data
+	sw $a0, 0($t0)           # escrita
+	j inputUser      
 
 cleardDisplay:
 	li $a0, 25       	 # linhas em branco (contador)
