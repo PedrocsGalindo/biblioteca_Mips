@@ -41,6 +41,18 @@ main:
 	la $a0, msgMain
 	jal showMsg
 	
+	
+	la $a0, bufferUser
+	li $v0, 1                # Syscall para imprimir  inteiro
+	syscall
+	
+	li $a0, '\n'
+	li $v0, 11                 # Syscall para imprimir caractere
+	syscall
+	li $a0, '\n'
+	li $v0, 11                 # Syscall para imprimir caractere
+	syscall
+	
 	jal creatUser
 	jal cleardDisplay
 	
@@ -195,10 +207,9 @@ inputUser:
 	lw $a0, 0($t0)             # carrega o caracter
 	li $t3, 0x0A 		   # Enter
 	beq $a0, $t3, return
-	la $t0, bufferUser 
-	add $t0, $t0, $s0
-	sb $t2, 0($t0)   	    # salva no buffer
-	addi $s0, $s0, 1	   # +1 indice bufferUser
+	la $t2, bufferUser 
+	sb $a0, 0($t2)   	    # salva no buffer
+	addi $s0, $s0, 1	    # +1 indice bufferUser
 	j loopDisplay
 	
 loopDisplay:
@@ -209,6 +220,10 @@ loopDisplay:
 
 	li $t0, 0xFFFF000C       # endereço do display data
 	sw $a0, 0($t0)           # escrita
+	lb $a0 0($t2)
+	li $v0, 11
+	syscall
+	
 	j inputUser      
 
 cleardDisplay:
