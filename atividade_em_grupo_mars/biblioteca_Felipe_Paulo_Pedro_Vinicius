@@ -5,9 +5,12 @@ usersFile:  .asciiz "users.txt"
 booksFile:  .asciiz "books.txt"
 
 # MENSAGENS PADROES ----------------------------------------------------------------------------------------
-msgMain: .asciiz "Bem vindo/a a livraria da Rural\n\nInforme sua matricula:"
+msgMain: .asciiz "Bem vindo/a a livraria da Rural\n\nInforme sua matricula:\n\n"
 msgMenu: .asciiz "1- Livros\n2- Usuarios"
-msgMatriculaNaoEncontrada: .asciiz "Numero de matricula não encontrada, escreva novamente"
+msgMatriculaNaoEncontrada: .asciiz "Numero de matricula não encontrada, escreva novamente\n"
+msgNameUser: .asciiz "Qual o nome do Estudante\n"
+msgRegistrationCode: .asciiz "Qual o numero de matricula\n"
+msgCourseUser: .asciiz "Qual o curso do Estudante\n"
 
 # BUFFERS --------------------------------------------------------------------------------------------------
 bufferUser:  .space 100    #verificar se esse numero não esta sendo mais que o suficiente (exagero)
@@ -25,78 +28,85 @@ main:
 	li $s1, 0		# indice do bufferLinha
 	
 	#Mensagem de bem vindo e numero de matricua
-	la $a0, msgMain
+	la $a2, msgMain
 	jal showMsg
 	
-	#Numero de matricula do Usuario
-	jal verificarMatricula
+	li $v0, 11           # Syscall para imprimir caractere
+	li $a0, '\n'         # Nova linha
+	syscall
+	
+	la $a0, bufferUser         # parametros da função
+	li $v0, 36       # Syscall para imprimir hexadecimal
+	syscall          # Exibe o endereço
+	
+	li $v0, 11           # Syscall para imprimir caractere
+	li $a0, '\n'         # Nova linha
+	syscall
+	
+	jal creatUser
 	jal cleardDisplay
 	
 	#Mensagem de menu
-	la $a0, msgMenu
+	la $a2, msgMenu
 	jal showMsg
 	
 	#Resposta do Usuario
 	jal inputUser
+	
+creatUser:
+	addi $sp, $sp, -4   
+	sw $ra, 0($sp)     	     # salvar referencia
+	
+	la $a0, bufferUser         # parametros da função	
+	move $a1, $s0
+	
+	la $a2, msgNameUser
+	jal showMsg
+	jal inputUser
+	jal commaInBuffer
+	
+	la $a2, msgRegistrationCode
+	jal showMsg
+	jal inputUser
+	jal commaInBuffer
+	
+	la $a2, msgCourseUser
+	jal showMsg
+	jal inputUser
+	
+	move $s0, $a1		     #recupera o indice do buffer
+	
+	la $a0, usersFile
+	la $a1, bufferUser
+	move $a2, $s0
+	
+	jal saveData
 
-#Antes de usar tem que colocar o nome do arquivo em $a0 
-leitura: 
-	li $v0, 13                   # abrir arquivo           
-	li $a1, 0                    # 0 = read
-	li $a2, 0                    # permissões
-	syscall
-	move $s0, $v0                # descritor do arquivo
+	lw $ra, 0($sp)       	     # recupera referencia do chamdaor
+	addi $sp, $sp, 4    
+	
+	la $a0, bufferUser	      #limpando o buffer
+	move $a1, $s0
+	jal clearBuffer
+	li $s0, 0
+	
 	j return
-	
-loopLeituraPorByte:
 
-	li $v0, 14                   			  # syscall para leitura
-	move $a0, $s0                			  # descritor do arquivo
-	la $a1, bufferByte             			  # buffer 
-	li $a2, 1                    	  		  #  1 byte por vez
-	syscall
-	move $t0, $v0               	 		  # numero de bytes lidos (0 == fim do arquivo)
+commaInBuffer:
+# apos o uso tem que atualizar o valor do indice do buffer
+# Parametro
+# $a0 -> buffer
+# $a1 -> indice do buffer
+	li $t1, 0x2C        	     # caracter da virgula
+	add $t0, $a0, $a1
+	sb $t1, 0($t0)      	     # virgula no buffer
+	addi $a1, $a1, 1             # +1 indice bufferUser
 	
-	beqz $t0, return  	  # se for fim do arquivo (preciso verificar se tem quebra de linha antes do fim do arquivo)
-
-	lb $t2, 0($a1)               	   		  # Carregar caractere lido
-	li $t3, 0x0A 
-	beq $t2, $t3, return    # verifica a quebra de linha 
-	
-	sb $t2, bufferLinha($s1)     			  # Salva o caractere na linha
-	addi $s1, $s1, 1             			  # +1 indice bufferLinha
-	j loopLeituraPorByte                		  # Continua lendo o próximo caractere
-
-verificarMatricula:
-	addi $sp, $sp, -4     	     # referencia ao chamador
-    	sw $ra, 0($sp)         	
-
-	jal inputUser           #input user (salvo no bufferUser, indice -> $s0)
-	
-	j loopVerificarMatricula
-	
-	lw $ra, 0($sp) 		     # restaura $ra após a chamada
-   	addi $sp, $sp, 4       
-   	
-   	j return
-loopVerificarMatricula:
-	addi $sp, $sp, -4     	     # referencia ao chamador
-    	sw $ra, 0($sp)   
-    	
-    	la $a0, usersFile            # arquivo
-	jal leitura
-	jal loopLeituraPorByte
-	
-	lw $ra, 0($sp) 		     # restaura $ra após a chamada
-   	addi $sp, $sp, 4       
-   	
-   	j return
-   	
 saveData:
 # Parametro 
 # $a0 -> nome do arquivo 
-# $a0 -> endereço da string -> $t0
-# $a0 -> tamanho da string ->  $t1
+# $a1 -> endereço da string -> $t0
+# $a2 -> tamanho da string ->  $t1
 
 	move $t0, $a1        #remediar a sobrescrita dos registradores
 	move $t1, $a2 
@@ -112,7 +122,6 @@ saveData:
 	move $a0, $s0        # Descritor do arquivo
 	move $a1, $t0        
 	move $a2, $t1        
-	li $a2, 22           # Tamanho da string (deve estar correto)
 	syscall
 	
 	j closeFile
@@ -124,7 +133,29 @@ closeFile:
 	j return
 
 # FUNCOES SIMPLES MUITO USADAS --------------------------------------------------------------------------------------------------------------------
+clearBuffer:
+# apos o uso tem que zerar o valor do indice do buffer
+# parametro
+# $a0 -> buffer
+# $a1 -> indice
+	add $a0, $a0, $a1	    #endereço do ultimo elemento do buffer
 
+	addi $sp, $sp, -4   
+	sw $ra, 0($sp)     	     # salvar referencia
+	
+	jal loopClearBuffer
+	
+	lw $ra, 0($sp)       	     # recupera referencia
+	addi $sp, $sp, 4    
+	j return 
+	
+loopClearBuffer:
+	li $t1, 0
+	sb $t1, 0($a0) 	     # armazena 0 no buffer
+	subi $a0, $a0, 1
+	subi $a1, $a1, 1
+	bgez $a1, return      	# enquanto índice >= 0
+	
 inputUser:
 	li $t0, 0xFFFF0000         # endereço do keyboard status
 	lw $t1, 0($t0)             # status do teclado, bit menos significativo = 0 -> sem caracter indisponivel
@@ -133,16 +164,17 @@ inputUser:
 
 	# le caractere do teclado
 	li $t0, 0xFFFF0004         # endereço do keyboard data
-	lw $a0, 0($t0)             # carrega o caracter
-	li $t2, 0x0A 		   # Enter
-	beq $a0, $t2, return
-	sb $a0, bufferUser($s0)    # salva no buffer
+	lw $t2, 0($t0)             # carrega o caracter
+	li $t3, 0x0A 		   # Enter
+	beq $t2, $t3, return
+	sb $t2, bufferUser($s0)    # salva no buffer
 	addi $s0, $s0, 1	   # +1 indice bufferUser
-	j inputUser
-
-# Parametro $a0 -> mensagem
+	j loopDisplay
+	
 showMsg:
-	lb $t0, 0($a0)		  #caractere
+# Parametro 
+# $a2 -> mensagem
+	lb $t0, 0($a2)		  #caractere
 	beqz $t0, return	  #verifica se terminou
 	li $t1, 0xFFFF0008        # endereço do display status
 	j loopDisplaymsg    	  #loop escrita
@@ -155,7 +187,7 @@ loopDisplaymsg:
 	li $t1, 0xFFFF000C       # endereço do display data
 	sw $t0, 0($t1)           # escreve
 
-	addi $a0, $a0, 1  	 # próximo caractere
+	addi $a2, $a2, 1  	 # próximo caractere
 	j showMsg     
 
 cleardDisplay:
