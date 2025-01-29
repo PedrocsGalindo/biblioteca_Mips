@@ -2,7 +2,7 @@
 
 # NOMES DOS ARQUIVOS --------------------------------------------------------------------------------------- 
 usersFile:  .asciiz "C:/Users/Vinícius Lima/Documents/UFRPE/biblioteca_Mips/atividade_em_grupo_mars/users.txt"  #Passando o Endereço complet  #Passando o Endereço completo- alterei 
-conteudoDoarquivoUser: .space 1024 - # tamanho do arquivo, não pode ser maior 
+conteudoDoarquivoUser: .space 1024  # tamanho do arquivo, não pode ser maior 
 booksFile:  .asciiz "books.txt"
 
 # MENSAGENS PADROES ----------------------------------------------------------------------------------------
