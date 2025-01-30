@@ -8,9 +8,13 @@ booksFile:  .asciiz "books.txt"
 msgMain: .asciiz "Bem vindo/a a livraria da Rural\n\nInforme sua matricula:\n\n"
 msgMenu: .asciiz "1- Livros\n2- Usuarios"
 msgMatriculaNaoEncontrada: .asciiz "Numero de matricula não encontrada, escreva novamente\n"
-msgNameUser: .asciiz "Qual o nome do Estudante\n"
-msgRegistrationCode: .asciiz "\nQual o numero de matricula\n"
-msgCourseUser: .asciiz "\nQual o curso do Estudante\n"
+msgQual: .asciiz "\nQual "
+msgTitleBook: .asciiz "o titulo do livro\n"
+msgAuthorBook: .asciiz "o nome do autor\n"
+msgISBNBook: .asciiz "o IBSN\n"
+msgNameUser: .asciiz "o nome do Estudante\n"
+msgRegistrationCode: .asciiz "o numero de matricula\n"
+msgCourseUser: .asciiz "o curso do Estudante\n"
 
 # BUFFERS --------------------------------------------------------------------------------------------------
 bufferUser:  .space 100    #verificar se esse numero não esta sendo mais que o suficiente (exagero)
@@ -42,63 +46,10 @@ main:
 	la $a0, msgMain
 	jal showMsg
 	
-	jal creatUser
+	jal creatBook
 	jal cleardDisplay
 	
 	j endRun
-
-creatUser:
-	addi $sp, $sp, -4   
-	sw $ra, 0($sp)     	     # salvar referencia
-	 
-	move $a1, $s0 		     # parametros da função -> indice(commaInBuffer)
-	
-	#Nome
-	la $a0, msgNameUser          # parametros da função -> mensagem(showMsg)
-	jal showMsg
-	jal inputUser	
-	la $a0, bufferUser  	     # parametros da função -> buffer(commaInBuffer) 
-	move $a1, $s0
-	jal commaInBuffer
-	addi $s0, $s0, 1
-	
-	#Matricula
-	la $a0, msgRegistrationCode  # parametros da função -> mensagem(showMsg)
-	jal showMsg
-	jal inputUser
-	la $a0, bufferUser  	     # parametros da função -> buffer(commaInBuffer)
-	move $a1, $s0
-	jal commaInBuffer
-	addi $s0, $s0, 1
-	
-	#Curso
-	la $a0, msgCourseUser        # parametros da função -> mensagem(showMsg)
-	jal showMsg
-	jal inputUser
-	
-	#Quebra de linha
-	la $a0, bufferUser
-	add $a0, $a0, $s0
-	li $t0, '\n'
-	sb $t0, 0($a0)
-	addi $s0, $s0,1
-	
-	#Mostrar Cadastro
-	la $a0, bufferUser
-	move $a1, $s0
-	jal showBuffer
-	
-	la $a0, usersFile	     # parametros da função -> arquivo(saveData) 
-	la $a1, bufferUser	     # parametros da função -> buffer(saveData) 
-	move $a2, $s0	 	     # parametros da função -> tamanhoString(saveData) 
-	jal saveData
-	
-	jal clearBufferUser
-	
-	lw $ra, 0($sp)       	     # recupera referencia do chamdaor
-	addi $sp, $sp, 4    
-	
-	j return
 
 clearBufferUser:
 	li $s0, 0
@@ -146,6 +97,124 @@ commaInBuffer:
 	sb $t1, 0($t0)      	     # virgula no buffer
 	addi $a1, $a1, 1             # +1 indice bufferUser
 	j return
+
+#FUNCOES DE CRIACAO DE ELEMENTOS
+creatBook:
+	addi $sp, $sp, -4   
+	sw $ra, 0($sp)     	     # salvar referencia
+
+	#Titulo
+	la $a0, msgQual          # parametros da função -> mensagem(showMsg)
+	jal showMsg
+	la $a0, msgTitleBook          # parametros da função -> mensagem(showMsg)
+	jal showMsg
+	jal inputUser	
+	la $a0, bufferUser  	     # parametros da função -> buffer(commaInBuffer) 
+	move $a1, $s0
+	jal commaInBuffer
+	addi $s0, $s0, 1
+	
+	#Autor
+	la $a0, msgQual          # parametros da função -> mensagem(showMsg)
+	jal showMsg
+	la $a0, msgAuthorBook          # parametros da função -> mensagem(showMsg)
+	jal showMsg
+	jal inputUser
+	la $a0, bufferUser  	     # parametros da função -> buffer(commaInBuffer)
+	move $a1, $s0
+	jal commaInBuffer
+	addi $s0, $s0, 1
+	
+	#ISBN
+	la $a0, msgQual          # parametros da função -> mensagem(showMsg)
+	jal showMsg
+	la $a0, msgISBNBook          # parametros da função -> mensagem(showMsg)
+	jal showMsg
+	jal inputUser
+	
+	#Quebra de linha
+	la $a0, bufferUser
+	add $a0, $a0, $s0
+	li $t0, '\n'
+	sb $t0, 0($a0)
+	addi $s0, $s0,1
+
+	#Mostrar Cadastro
+	la $a0, bufferUser
+	move $a1, $s0
+	jal showBuffer
+	
+	la $a0, booksFile	     # parametros da função -> arquivo(saveData) 
+	la $a1, bufferUser	     # parametros da função -> buffer(saveData) 
+	move $a2, $s0	 	     # parametros da função -> tamanhoString(saveData) 
+	jal saveData
+	
+	jal clearBufferUser
+	
+	lw $ra, 0($sp)       	     # recupera referencia do chamdaor
+	addi $sp, $sp, 4    
+			
+	j return
+	
+creatUser:
+	addi $sp, $sp, -4   
+	sw $ra, 0($sp)     	     # salvar referencia
+	 
+	move $a1, $s0 		     # parametros da função -> indice(commaInBuffer)
+	
+	#Nome
+	la $a0, msgQual          # parametros da função -> mensagem(showMsg)
+	jal showMsg
+	la $a0, msgNameUser          # parametros da função -> mensagem(showMsg)
+	jal showMsg
+	jal inputUser	
+	la $a0, bufferUser  	     # parametros da função -> buffer(commaInBuffer) 
+	move $a1, $s0
+	jal commaInBuffer
+	addi $s0, $s0, 1
+	
+	#Matricula
+	la $a0, msgQual          # parametros da função -> mensagem(showMsg)
+	jal showMsg
+	la $a0, msgRegistrationCode  # parametros da função -> mensagem(showMsg)
+	jal showMsg
+	jal inputUser
+	la $a0, bufferUser  	     # parametros da função -> buffer(commaInBuffer)
+	move $a1, $s0
+	jal commaInBuffer
+	addi $s0, $s0, 1
+	
+	#Curso
+	la $a0, msgQual          # parametros da função -> mensagem(showMsg)
+	jal showMsg
+	la $a0, msgCourseUser        # parametros da função -> mensagem(showMsg)
+	jal showMsg
+	jal inputUser
+	
+	#Quebra de linha
+	la $a0, bufferUser
+	add $a0, $a0, $s0
+	li $t0, '\n'
+	sb $t0, 0($a0)
+	addi $s0, $s0,1
+	
+	#Mostrar Cadastro
+	la $a0, bufferUser
+	move $a1, $s0
+	jal showBuffer
+	
+	la $a0, usersFile	     # parametros da função -> arquivo(saveData) 
+	la $a1, bufferUser	     # parametros da função -> buffer(saveData) 
+	move $a2, $s0	 	     # parametros da função -> tamanhoString(saveData) 
+	jal saveData
+	
+	jal clearBufferUser
+	
+	lw $ra, 0($sp)       	     # recupera referencia do chamdaor
+	addi $sp, $sp, 4    
+	
+	j return
+
 
 # FUNCOES SIMPLES MUITO USADAS --------------------------------------------------------------------------------------------------------------------
 
