@@ -93,15 +93,61 @@ creatUser:
 	move $a2, $s0	 	     # parametros da função -> tamanhoString(saveData) 
 	jal saveData
 	
-	la $a0, bufferUser	      # parametros da função -> buffer(clearBuffer)
-	move $a1, $s0		      # parametros da função -> indice(clearBuffer)
-	jal clearBuffer               #limpando o buffer
-	li $s0, 0		      #Indice 0
+	jal clearBufferUser
 	
 	lw $ra, 0($sp)       	     # recupera referencia do chamdaor
 	addi $sp, $sp, 4    
 	
 	j return
+
+clearBufferUser:
+	li $s0, 0
+	j return
+
+saveData:
+# Parâmetros
+# $a0 -> Nome do arquivo
+# $a1 -> Endereço da string a ser salva (buffer)
+# $a2 -> Tamanho da string a ser salva
+
+	move $t0, $a1
+	move $t1, $a2
+	
+	li $v0, 13           # abrir arquivo
+	move $a0, $a0	     # nome do arquivo
+	li $a1, 9            # append
+	li $a2, 0            # permissoes 
+	syscall
+	move $t3, $v0        # descritor do arquivo
+
+	# Escrita no arquivo
+	li $v0, 15           # escrita
+	move $a0, $t3        # descritor do arquivo
+	move $a1, $t0        # endereço String
+	move $a2, $t1        # tamanho String
+	syscall
+	
+	j closeFile
+
+closeFile:	
+	li $v0, 16
+	move $a0, $a0
+	syscall
+
+	j return
+
+commaInBuffer:
+# apos o uso tem que atualizar o valor do indice do buffer
+# Parametro
+# $a0 -> buffer
+# $a1 -> indice do buffer
+	li $t1, 0x2C        	     # caracter da virgula
+	add $t0, $a0, $a1
+	sb $t1, 0($t0)      	     # virgula no buffer
+	addi $a1, $a1, 1             # +1 indice bufferUser
+	j return
+
+# FUNCOES SIMPLES MUITO USADAS --------------------------------------------------------------------------------------------------------------------
 
 showBuffer:
 # Parâmetros
@@ -131,72 +177,7 @@ loopshowBuffer:
 	beqz $a1, return    # Se o índice for 0, chegou no ultimo
 	j loopshowBuffer       # Continua a exibição
 
-saveData:
-# Parâmetros
-# $a0 -> Nome do arquivo
-# $a1 -> Endereço da string a ser salva (buffer)
-# $a2 -> Tamanho da string a ser salva
 
-	move $t0, $a1
-	move $t1, $a2
-
-	li $v0, 13           # abrir arquivo
-	move $a0, $a0	     # nome do arquivo
-	li $a1, 9            # append
-	li $a2, 0            # permissoes 
-	syscall
-	move $s0, $v0        # descritor do arquivo
-
-	# Escrita no arquivo
-	li $v0, 15           # escrita
-	move $a0, $s0        # descritor do arquivo
-	move $a1, $t0        # endereço String
-	move $a2, $t1        # tamanho String
-	syscall
-	
-	j closeFile
-
-closeFile:	
-	li $v0, 16
-	move $a0, $a0
-	syscall
-
-	j return
-
-commaInBuffer:
-# apos o uso tem que atualizar o valor do indice do buffer
-# Parametro
-# $a0 -> buffer
-# $a1 -> indice do buffer
-	li $t1, 0x2C        	     # caracter da virgula
-	add $t0, $a0, $a1
-	sb $t1, 0($t0)      	     # virgula no buffer
-	addi $a1, $a1, 1             # +1 indice bufferUser
-
-# FUNCOES SIMPLES MUITO USADAS --------------------------------------------------------------------------------------------------------------------
-
-clearBuffer:
-# Apos o uso tem que zerar o valor do indice do buffer
-# parametro
-# $a0 -> buffer
-# $a1 -> indice
-	add $a0, $a0, $a1	    #endereço do ultimo elemento do buffer
-
-	addi $sp, $sp, -4   
-	sw $ra, 0($sp)     	     # salvar referencia
-	
-	jal loopClearBuffer
-	
-	lw $ra, 0($sp)       	     # recupera referencia
-	addi $sp, $sp, 4    
-	j return 
-	
-loopClearBuffer:
-	li $t1, 0
-	sb $t1, 0($a0) 	     # armazena 0 no buffer
-	subi $a0, $a0, 1
-	subi $a1, $a1, 1
-	bgez $a1, return      	# enquanto índice >= 0
 
 inputUser:
 	li $t0, 0xFFFF0000         # endereço do keyboard status
