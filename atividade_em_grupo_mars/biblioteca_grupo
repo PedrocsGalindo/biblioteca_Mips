@@ -21,7 +21,7 @@ msgCourseUser: .asciiz "o curso do Estudante\n"
 bufferUser:  .space 100    #verificar se esse numero não esta sendo mais que o suficiente (exagero)
 bufferLinha: .space 40     #verificar se esse numero é o suficiente
 bufferByte: .space 1
-bufferWord. .space 4
+bufferWord: .space 4
 conteudoDoarquivoUser: .space 1024  # tamanho do arquivo, não pode ser maior 
                        
 backspace:  .byte 0x08    
@@ -48,7 +48,7 @@ main:
 	la $a0, msgMain
 	jal showMsg
 	
-	jal creatBookLoan
+	jal creatUser
 	jal cleardDisplay
 	
 	j endRun
@@ -81,16 +81,8 @@ creatBookLoan:
 	addi $s0, $s0, 1
 	
 	#Data_Retirada 
-	move $a0, $s0
-	jal getCurrentDateOnBuffer
-	move $s0, $a0		     # atualizando o indice
-	la $a0, bufferUser  	     # parametros da função -> buffer(commaInBuffer)
-	move $a1, $s0
-	jal commaInBuffer
-	addi $s0, $s0, 1
 	
 	#Data_Devolução
-	#jal getReturnDateOnBuffer
 	
 	#Quebra de linha
 	la $a0, bufferUser
@@ -114,80 +106,7 @@ creatBookLoan:
 	lw $ra, 0($sp)       	     # recupera referencia do chamdaor
 	addi $sp, $sp, 4    
 			
-	j return
-	
-getCurrentDateOnBuffer:
-# Parametro
-# $a0 -> indice 
-
-# Retorna
-# indice -> $a0 
-
-	addi $sp, $sp, -4   
-	sw $ra, 0($sp)     	     # salvar 
-	
-	move $t0, $a0
-	
-	li $v0, 30       
-	li $a0, 1        
-	syscall
-	
-    	move $t1, $a0    # Ano (YYYY)
-    	move $t2, $a1    # Mês (MM)
-    	move $t3, $a2    # Dia (DD)
-    	
-    	move $a0, $t0			# indice
-    	la $a1, bufferUser
-    	add  $a1, $a1, $a0		# ultimo endereço do buffer
-    	move $t4, $a0			# salva o indice
-    	la $a3, bufferWord
-    	
-    	# Salvar o Dia
-    	sw $t3, 0($a3)			# salva no bufferWor
-    	move $a0, $a1			# endereço do proximo elemento do bufferUser
-    	la $a1, bufferWord
-    	jal bufferWordToBufferUser
-    	addi $t4, $t4, 4
-    	la $a0, bufferUser
-    	jal barInBuffer
-    	
-    	li $v0, 1       
-	li $a0, 1
-	syscall
-	
-    	move $a0, $t4
-    	
-    	# Salvar o Mes
-    	sw $t2, 4($a1)  
-    	la $a0, bufferUser
-    	jal barInBuffer
-    	move $a0, $t4
-    	
-    	# Salvar o Ano
-    	sw $t1, 8($a1)  
-    	
-    	move $a0, $t4		     # atualiza o indice
-    	addi $a0, $a0, 14
-    	
-    	lw $ra, 0($sp)       	     # recupera referencia do chamdaor
-	addi $sp, $sp, 4   
-	
-	j return
-	
-bufferWordToBufferUser:
-# Tem que atualizar +4 no indice do bufferUser
-# Parametro
-# $a0 -> endereço do proximo elemento do buffer
-# $a1 -> endereço do bufferWord (organização, não é um parametro de verdade)
-	 lb $a4, 0($a1)
-	 sb $a4, 0($a0)
-	 lb $a4, 1($a1)
-	 sb $a4, 1($a0)
-	 lb $a4, 2($a1)
-	 sb $a4, 2($a0)
-	 lb $a4, 3($a1)
-	 sb $a4, 3($a0)
-	
+	j return	
 	
 creatBook:
 	addi $sp, $sp, -4   
@@ -307,6 +226,8 @@ creatUser:
 
 
 # FUNCOES SIMPLES MUITO USADAS --------------------------------------------------------------------------------------------------------------------
+
+# FUNCOES COLOCAR CARACTER ------------------------------------------
 commaInBuffer:
 # apos o uso tem que atualizar o valor do indice do buffer
 # Parametro
@@ -328,6 +249,8 @@ barInBuffer:
 	sb $t1, 0($t0)      	     # barra no buffer
 	addi $a1, $a1, 1             # +1 indice bufferUser
 	j return
+
+# FUNCOES DE BUFFER ------------------------------------------
 
 showBuffer:
 # Parâmetros
@@ -357,7 +280,7 @@ loopshowBuffer:
 	beqz $a1, return    # Se o índice for 0, chegou no ultimo
 	j loopshowBuffer       # Continua a exibição
 
-
+# FUNCOES DE MMIO -----------------------------------------------
 
 inputUser:
 	li $t0, 0xFFFF0000         # endereço do keyboard status
