@@ -17,6 +17,8 @@ msgNameUser: .asciiz "o nome do Estudante\n"
 msgRegistrationCode: .asciiz "o numero de matricula\n"
 msgCourseUser: .asciiz "o curso do Estudante\n"
 
+msgTeste: .asciiz "12345"
+
 # BUFFERS --------------------------------------------------------------------------------------------------
 			  # Não pode ter espaço nos espaços do bloco (talvez depois melhorar a logica para suportar isso)
 bufferUser:  .space 68    # 30 - primeiro bloco, 1 - virgula,  5 - segundo bloco, 1 - virgula,  30 - segundo bloco, 1 - quebra de linha
@@ -45,14 +47,15 @@ main:
 	li $s1, 0		# numero de elementos do bufferLinha (para adicinar elemento o numero ta certo, mas para carregar é preciso diminuir 1)
 	
 	#Mensagem de bem vindo e numero de matricua
-	la $a0, msgMain
-	jal showMsg
+	#la $a0, msgMain
+	#jal showMsg
 	
-	jal creatUser
-	
-	la $a2, msgQual
+	la $a2, msgTeste
 	jal seachUserByRegister
-	jal cleardDisplay
+	
+	li $v0, 1
+	move $a0, $a1
+	syscall 
 	
 	j endRun
 	
@@ -67,6 +70,8 @@ seachUserByRegister:
 	move $a2, $a2
 	jal searchStringOnFile
 	
+	
+	
 	lw $ra, 0($sp)     	     # recupera referencia
 	addi $sp, $sp, 4   
 	
@@ -74,6 +79,7 @@ seachUserByRegister:
 
 	
 searchStringOnFile:
+#Retorna $a1 -> 0 = encontrou , -1 = não encontrou
 #Parametros
 #$a0 -> nome do arquivo
 #$a1 -> bloco (1, 2 ou 3)
@@ -98,16 +104,14 @@ searchStringOnFile:
 	li $t1, 2    
 	li $t2, 3
 	la $a3, bufferLinha			#endereco do primiero elemento do bloco 1
-	beq $a1, $t0, searchFirstBlock
+	beq $a1, $t0, searchBlock
 	addi $a3, $a3, 31			#endereco do primiero elemento do bloco 2
-	beq $a1, $t1, searchSecondBlock
+	beq $a1, $t1, searchBlock
 	addi $a3, $a3, 5			#endereco do primiero elemento do bloco 3
-	beq $a1, $t2, searchThirdBlock
-
-searchFirstBlock:
-#Parametros
-#$a2 -> string procurada
-searchSecondBlock:
+	beq $a1, $t2, searchBlock
+	bgt $a1, $t2, return			# Caso, termine a busca achando
+	
+searchBlock:
 #Parametros
 # $a3 -> endereço do bloco no bufferLinha
 # $a2 -> string procurada
@@ -120,8 +124,6 @@ searchSecondBlock:
 	move $a2, $t0		#caracteres, que podem passar para outras funções
 	move $a3, $t1
 	
-	li $t4, 0x2C
-	
 	beq $a2, $zero, endSearch
 	bne $a2, $a3, diferents
 	
@@ -131,21 +133,20 @@ searchSecondBlock:
 	addi $a2, $a2, 1
 	addi $a3, $a3, 1
 	
-	j searchSecondBlock
-	
-searchThirdBlock:
-#Parametros
-#$a2 -> string procurada
+	j searchBlock
 
 endSearch:
-	beq $a3, $zero, findSearch   #verifica se ambas as palavras terminaram
+	li $t4, 0x2C		     # virgula
+	beq $a3, $t4, findString     # secundo bloco temrina em virgula, não tem espaço vazio
+	beq $a3, $zero, findString   # verifica se ambas as palavras terminaram
 	j diferents
 
-findSearch:
-	j return
+findString:
+	li $a1, 0	     	# $a1 = 0, caso encontre
+	j closeFile
 
 diferents:
-	j return
+	j searchStringOnFile
 
 #FUNCOES DE CRIACAO DE ELEMENTOS -----------------------------------------------------------------------------------------------------------------------
 creatUser:
@@ -424,7 +425,7 @@ barInBuffer:
 showBuffer:
 # Parâmetros
 # $a0 -> buffer
-# $a1 -> indice
+# $a1 -> indice (numero de elementos no buffer)
 	addi $sp, $sp, -4   
 	sw $ra, 0($sp)     	     # salvar referencia
 	
@@ -557,9 +558,29 @@ readFile:
 	li $a2, 68 		#tamanho do buffer
 	syscall
 	
+	#TEste
+	addi $sp, $sp, -4   
+	sw $ra, 0($sp)   
+	
+	la $a0, bufferLinha
+	li $a1, 68
+	jal showBuffer
+	
+	lw $ra, 0($sp)   
+	addi $sp, $sp, 4 
+	
+	blez $v0, endOfFile	# Se não tiver mais nada para ler
+	
+	j return
+	
+endOfFile:
+	li $a1, -1		# Caso chegue ao final do arquivo, não encontrou a string 
 	j closeFile
 	
-closeFile:	
+closeFile:
+# Parametros
+# $a0 -> nome do arquivo	
+
 	li $v0, 16
 	move $a0, $a0
 	syscall
