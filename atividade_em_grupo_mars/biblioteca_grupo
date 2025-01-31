@@ -19,7 +19,7 @@ msgCourseUser: .asciiz "o curso do Estudante\n"
 
 # BUFFERS --------------------------------------------------------------------------------------------------
 bufferUser:  .space 68    # 30 - primeiro bloco, 1 - virgula,  5 - segundo bloco, 1 - virgula,  30 - segundo bloco, 1 - quebra de linha
-bufferLinha: .space 67    # 30 - primeiro bloco, 1 - virgula,  5 - segundo bloco, 1 - virgula,  30 - segundo bloco
+bufferLinha: .space 68    # 30 - primeiro bloco, 1 - virgula,  5 - segundo bloco, 1 - virgula,  30 - segundo bloco, 1 - quebra de linha
 bufferByte: .space 1
 bufferWord: .space 4
                        
@@ -47,10 +47,59 @@ main:
 	la $a0, msgMain
 	jal showMsg
 	
-	jal creatBook
+	la $a2, msgQual
+	jal seachUserByRegister
 	jal cleardDisplay
 	
 	j endRun
+	
+seachUserByRegister:
+#Parametro
+#$a2 -> string procurada
+	addi $sp, $sp, -4   
+	sw $ra, 0($sp)     	     # salvar referencia
+	
+	la $a0, usersFile
+	li $a1, 2 
+	move $a2, $a2
+	jal searchStringOnFile
+	
+	lw $ra, 0($sp)     	     # recupera referencia
+	addi $sp, $sp, 4   
+
+	
+searchStringOnFile:
+#Parametros
+#$a0 -> nome do arquivo
+#$a1 -> bloco (1, 2 ou 3)
+#$a2 -> string procurada
+	addi $sp, $sp, -4   
+	sw $ra, 0($sp)     	     # salvar referencia
+	
+	move $a0, $a0
+	jal readFile		     # No bufferLinha tem uma linha do arquivo (no looping vai da primeira a ultima)
+	
+	lw $ra, 0($sp)     	     # recupera referencia
+	addi $sp, $sp, 4   
+		
+	move $a2, $a2 
+	beq $a1, 1, searchFirstBlock
+	beq $a1, 2, searchSecondBlock
+	beq $a1, 3, searchThirdBlock
+
+searchFirstBlock:
+#Parametros
+#$a2 -> string procurada
+searchSecondBlock:
+#Parametros
+#$a2 -> string procurada
+	li $v0, 11 
+	li $a0, '\n'	
+	syscall
+	j return
+searchThirdBlock:
+#Parametros
+#$a2 -> string procurada
 
 #FUNCOES DE CRIACAO DE ELEMENTOS -----------------------------------------------------------------------------------------------------------------------
 creatUser:
@@ -303,7 +352,6 @@ completeSecund30Block:
 	move $a1, $a1			#indice
 	j completeBlank
 	
-
 completeBlank:
 #parametro
 # $a0 - > maximo Elementos
@@ -319,7 +367,6 @@ completeBlank:
 	
 	j completeBlank
 	
-
 # FUNCOES COLOCAR CARACTER ------------------------------------------
 commaInBuffer:
 # apos o uso tem que atualizar o valor do indice do buffer
@@ -338,7 +385,6 @@ barInBuffer:
 # $a0 -> buffer
 # $a1 -> indice do buffer
 
-	
 	li $t1, '/'        	     
 	add $t0, $a0, $a1
 	sb $t1, 0($t0)      	     # barra no buffer
@@ -466,29 +512,24 @@ saveData:
 	
 	j closeFile
 
-lerArquivoUser:
-	li $v0, 13 #solicita a  abertura do arquivo USer
-	la $a0, usersFile #endereço do arquivo 
-	li $a1, 0 #leitura do arquvo
-	syscall #Descritor do arquivo vai para $v0
+readFile:
+# Parametros
+# $a0 -> nome do arquivo
+
+	li $v0, 13 		#solicita a  abertura do arquivo USer
+				#nome do arquivo 
+	li $a1, 0 		#leitura do arquvo
+	syscall 		#Descritor do arquivo vai para $v0
 	
-	move $s0, $v0 #copia do descritor
+	move $s0, $v0 		#copia do descritor
 	
 	move $a0, $s0
 	li $v0, 14 		#ler o conteudo referenciado por $a0
-	la $a1,bufferLinha 	#buffer que armazena o conteudo
-	li $a2, 1024 		#tamanho do buffer
+	la $a1, bufferLinha 	#buffer que armazena o conteudo
+	li $a2, 68 		#tamanho do buffer
 	syscall
 	
-	li $v0, 4 #imprimir o conteudo do arquivo
-	move $a0, $a1
-	syscall
-	
-	li $v0,16 # fechar o arquivo
-	move $a0 ,$s0
-	syscall
-	
-	j return
+	j closeFile
 	
 closeFile:	
 	li $v0, 16
