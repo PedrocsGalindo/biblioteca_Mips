@@ -18,6 +18,7 @@ msgRegistrationCode: .asciiz "o numero de matricula\n"
 msgCourseUser: .asciiz "o curso do Estudante\n"
 
 # BUFFERS --------------------------------------------------------------------------------------------------
+			  # Não pode ter espaço nos espaços do bloco (talvez depois melhorar a logica para suportar isso)
 bufferUser:  .space 68    # 30 - primeiro bloco, 1 - virgula,  5 - segundo bloco, 1 - virgula,  30 - segundo bloco, 1 - quebra de linha
 bufferLinha: .space 68    # 30 - primeiro bloco, 1 - virgula,  5 - segundo bloco, 1 - virgula,  30 - segundo bloco, 1 - quebra de linha
 bufferByte: .space 1
@@ -47,6 +48,8 @@ main:
 	la $a0, msgMain
 	jal showMsg
 	
+	jal creatUser
+	
 	la $a2, msgQual
 	jal seachUserByRegister
 	jal cleardDisplay
@@ -66,6 +69,8 @@ seachUserByRegister:
 	
 	lw $ra, 0($sp)     	     # recupera referencia
 	addi $sp, $sp, 4   
+	
+	j return
 
 	
 searchStringOnFile:
@@ -76,30 +81,71 @@ searchStringOnFile:
 	addi $sp, $sp, -4   
 	sw $ra, 0($sp)     	     # salvar referencia
 	
+	move $t0, $a1
+	move $t1, $a2
+	
 	move $a0, $a0
 	jal readFile		     # No bufferLinha tem uma linha do arquivo (no looping vai da primeira a ultima)
+	
+	move $a1, $t0	  	     #recuperando as referencias alteradas em readFile
+	move $a2, $t1
 	
 	lw $ra, 0($sp)     	     # recupera referencia
 	addi $sp, $sp, 4   
 		
 	move $a2, $a2 
-	beq $a1, 1, searchFirstBlock
-	beq $a1, 2, searchSecondBlock
-	beq $a1, 3, searchThirdBlock
+	li $t0, 1	  	     
+	li $t1, 2    
+	li $t2, 3
+	la $a3, bufferLinha			#endereco do primiero elemento do bloco 1
+	beq $a1, $t0, searchFirstBlock
+	addi $a3, $a3, 31			#endereco do primiero elemento do bloco 2
+	beq $a1, $t1, searchSecondBlock
+	addi $a3, $a3, 5			#endereco do primiero elemento do bloco 3
+	beq $a1, $t2, searchThirdBlock
 
 searchFirstBlock:
 #Parametros
 #$a2 -> string procurada
 searchSecondBlock:
 #Parametros
-#$a2 -> string procurada
-	li $v0, 11 
-	li $a0, '\n'	
-	syscall
-	j return
+# $a3 -> endereço do bloco no bufferLinha
+# $a2 -> string procurada
+	lb $t0, 0($a2)		#caracteres
+	lb $t1, 0($a3)
+	
+	move $t2, $a2		#salva referencia
+	move $t3, $a3
+	
+	move $a2, $t0		#caracteres, que podem passar para outras funções
+	move $a3, $t1
+	
+	li $t4, 0x2C
+	
+	beq $a2, $zero, endSearch
+	bne $a2, $a3, diferents
+	
+	move $a2, $t2		#recupera referencia
+	move $a3, $t3
+	
+	addi $a2, $a2, 1
+	addi $a3, $a3, 1
+	
+	j searchSecondBlock
+	
 searchThirdBlock:
 #Parametros
 #$a2 -> string procurada
+
+endSearch:
+	beq $a3, $zero, findSearch   #verifica se ambas as palavras terminaram
+	j diferents
+
+findSearch:
+	j return
+
+diferents:
+	j return
 
 #FUNCOES DE CRIACAO DE ELEMENTOS -----------------------------------------------------------------------------------------------------------------------
 creatUser:
@@ -114,8 +160,9 @@ creatUser:
 	
 	jal inputUser		   # Altera o indice
 	
+	#TESTE
 	move $a1, $s0
-	jal complete30Block
+	jal index30Block
 	move $s0, $a1			# atualiza o indice
 
 	la $a0, bufferUser  	     # parametros da função -> buffer(commaInBuffer) 
@@ -132,7 +179,7 @@ creatUser:
 	jal inputUser
 	
 	move $a1, $s0
-	jal complete5Block
+	jal index5Block
 	move $s0, $a1			# atualiza o indice
 	
 	la $a0, bufferUser  	     # parametros da função -> buffer(commaInBuffer)
@@ -148,7 +195,7 @@ creatUser:
 	jal inputUser
 	
 	move $a1, $s0
-	jal completeSecund30Block
+	jal indexSecund30Block
 	move $s0, $a1			# atualiza o indice
 	
 	#Quebra de linha
@@ -189,7 +236,7 @@ creatBookLoan:
 	jal inputUser		   # Altera o indice
 	
 	move $a1, $s0
-	jal complete30Block
+	jal index30Block
 	move $s0, $a1			# atualiza o indice
 
 	la $a0, bufferUser  	     # parametros da função -> buffer(commaInBuffer) 
@@ -206,7 +253,7 @@ creatBookLoan:
 	jal inputUser
 	
 	move $a1, $s0
-	jal complete5Block
+	jal index5Block
 	move $s0, $a1			# atualiza o indice
 	
 	la $a0, bufferUser  	     # parametros da função -> buffer(commaInBuffer)
@@ -221,7 +268,7 @@ creatBookLoan:
 	
 	#Formatar Data_Retirada e Data_Devolução juntos
 	move $a1, $s0
-	jal completeSecund30Block
+	jal indexSecund30Block
 	move $s0, $a1			# atualiza o indice
 	
 	#Quebra de linha
@@ -261,7 +308,7 @@ creatBook:
 	jal inputUser		   # Altera o indice
 	
 	move $a1, $s0
-	jal complete30Block
+	jal index30Block
 	move $s0, $a1			# atualiza o indice
 
 	la $a0, bufferUser  	     # parametros da função -> buffer(commaInBuffer) 
@@ -278,7 +325,7 @@ creatBook:
 	jal inputUser
 	
 	move $a1, $s0
-	jal complete5Block
+	jal index5Block
 	move $s0, $a1			# atualiza o indice
 	
 	la $a0, bufferUser  	     # parametros da função -> buffer(commaInBuffer)
@@ -294,7 +341,7 @@ creatBook:
 	jal inputUser
 	
 	move $a1, $s0
-	jal completeSecund30Block
+	jal indexSecund30Block
 	move $s0, $a1			# atualiza o indice
 	
 	#Quebra de linha
@@ -325,47 +372,28 @@ creatBook:
 
 # FUNCOES DE FORMATACAO DE DADOS ------------------------------------
 
-complete30Block:
+index30Block:
 # Indice vai para +30
 # Parametro
-# $a0 (tambem é alterado)
-# $a1 - > indice
-	li $a0, 30			#Numeor maximo
-	move $a1, $a1			#indice
-	j completeBlank
 
-complete5Block:
+# $a1 - > indice
+	li $a1, 30			# atualiza o indice
+	j return
+
+index5Block:
 # Indice vai para +5
 # Parametro
-# $a0 (tambem é alterado)
 # $a1 - > indice
-	li $a0, 36			#Numeor maximo
-	move $a1, $a1			#indice
-	j completeBlank
+	li $a1, 36			# atualiza o indice
+	j return
 	
-completeSecund30Block:
+indexSecund30Block:
 # Indice vai para +30
 # Parametro
-# $a0 (tambem é alterado)
 # $a1 - > indice
-	li $a0, 67			#Numeor maximo
-	move $a1, $a1			#indice
-	j completeBlank
+	li $a1, 67			# atualiza o indice
+	j return
 	
-completeBlank:
-#parametro
-# $a0 - > maximo Elementos
-# $a1 - > indice
-# Retorna $a1 - > indice
-	beq $a1, $a0, return
-	la $t0, bufferUser
-	add $t0, $t0, $a1		# endereço do proximo elemento do buffer
-	
-	li $t1, ' '
-	sb $t1, 0($t0)
-	addi $a1, $a1, 1
-	
-	j completeBlank
 	
 # FUNCOES COLOCAR CARACTER ------------------------------------------
 commaInBuffer:
