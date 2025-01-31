@@ -94,23 +94,93 @@ searchStringOnFile:
 	li $t0, 1	  	     
 	li $t1, 2    
 	li $t2, 3
+	la $a3, bufferLinha			#endereco do primiero elemento do bloco 1
 	beq $a1, $t0, searchFirstBlock
+	addi $a3, $a3, 31			#endereco do primiero elemento do bloco 2
 	beq $a1, $t1, searchSecondBlock
+	addi $a3, $a3, 5			#endereco do primiero elemento do bloco 3
 	beq $a1, $t2, searchThirdBlock
 
 searchFirstBlock:
 #Parametros
-#$a2 -> string procurada
+# $a3 -> endereço do bloco no bufferLinha
+# $a2 -> string procurada
+	lb $t0, 0($a2)		#caracteres
+	lb $t1, 0($a3)
+	
+	move $t2, $a2		#salva referencia
+	move $t3, $a3
+	
+	move $a2, $t0		#caracteres, que podem passar para outras funções
+	move $a3, $t1
+	
+	li $t4, 0x2C
+	
+	beq $a3, $t4, endSearch
+	bne $a2, $a3, diferents
+	
+	move $a2, $t2		#recupera referencia
+	move $a3, $t3
+	
+	addi $a2, $a2, 1
+	addi $a3, $a3, 1
+	
+	j searchSecondBlock
 searchSecondBlock:
 #Parametros
-#$a2 -> string procurada
-	li $v0, 11 
-	li $a0, '\n'	
-	syscall
-	j return
+# $a3 -> endereço do bloco no bufferLinha
+# $a2 -> string procurada
+	lb $t0, 0($a2)		#caracteres
+	lb $t1, 0($a3)
+	
+	move $t2, $a2		#salva referencia
+	move $t3, $a3
+	
+	move $a2, $t0		#caracteres, que podem passar para outras funções
+	move $a3, $t1
+	
+	li $t4, 0x2C
+	
+	beq $a3, $t4, endSearch
+	bne $a2, $a3, diferents
+	
+	move $a2, $t2		#recupera referencia
+	move $a3, $t3
+	
+	addi $a2, $a2, 1
+	addi $a3, $a3, 1
+	
+	j searchSecondBlock
+	
 searchThirdBlock:
 #Parametros
-#$a2 -> string procurada
+# $a3 -> endereço do bloco no bufferLinha
+# $a2 -> string procurada
+	lb $t0, 0($a2)		#caracteres
+	lb $t1, 0($a3)
+	
+	move $t2, $a2		#salva referencia
+	move $t3, $a3
+	
+	move $a2, $t0		#caracteres, que podem passar para outras funções
+	move $a3, $t1
+	
+	li $t4, '\n'
+	
+	beq $a3, $t4, endSearch
+	bne $a2, $a3, diferents
+	
+	move $a2, $t2		#recupera referencia
+	move $a3, $t3
+	
+	addi $a2, $a2, 1
+	addi $a3, $a3, 1
+	
+	j searchSecondBlock
+
+endSearch:
+	beq $a2, $zero, findSearch   #verifica se ambas as palavras terminaram
+	j diferentes
 
 #FUNCOES DE CRIACAO DE ELEMENTOS -----------------------------------------------------------------------------------------------------------------------
 creatUser:
