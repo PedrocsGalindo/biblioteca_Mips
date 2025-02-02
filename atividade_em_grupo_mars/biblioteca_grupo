@@ -13,6 +13,7 @@ msgQual: .asciiz "\nQual "
 msgTitleBook: .asciiz "o titulo do livro\n"
 msgAuthorBook: .asciiz "o nome do autor\n"
 msgISBNBook: .asciiz "o IBSN\n"
+msgQuantBook: .asciiz "Quantos livros disponiveis\n"
 msgNameUser: .asciiz "o nome do Estudante\n"
 msgRegistrationCode: .asciiz "o numero de matricula\n"
 msgCourseUser: .asciiz "o curso do Estudante\n"
@@ -50,7 +51,6 @@ main:
 	#Mensagem de bem vindo e numero de matricua
 	#la $a0, msgMain
 	#jal showMsg
-	
 	la $a2, msgTeste
 	jal seachUserByRegister
 	
@@ -165,12 +165,15 @@ endSearch:
 	j diferents
 
 findString:
+	addi $sp, $sp, -4
 	lw $ra, 0($sp)     	     # recupera referencia
-	addi $sp, $sp, 4   
-	
+	 
 	la $a0, bufferLinha
 	li $a1, 68
 	jal showBuffer
+	
+	addi $sp, $sp, 4
+	lw $ra, 0($sp) 
 	
 	li $a1, 0	     	# $a1 = 0, caso encontre
 	j closeFile
@@ -347,12 +350,11 @@ creatBook:
 	jal commaInBuffer
 	addi $s0, $s0, 1
 	
-	#Autor
+	#ISBN
 	la $a0, msgQual          # parametros da função -> mensagem(showMsg)
 	jal showMsg
-	la $a0, msgAuthorBook  # parametros da função -> mensagem(showMsg)
+	la $a0, msgISBNBook        # parametros da função -> mensagem(showMsg)
 	jal showMsg
-	
 	jal inputUser
 	
 	move $a1, $s0
@@ -364,10 +366,21 @@ creatBook:
 	jal commaInBuffer
 	addi $s0, $s0, 1
 	
-	#ISBN
+	#Autor
 	la $a0, msgQual          # parametros da função -> mensagem(showMsg)
 	jal showMsg
-	la $a0, msgISBNBook        # parametros da função -> mensagem(showMsg)
+	la $a0, msgAuthorBook  # parametros da função -> mensagem(showMsg)
+	jal showMsg
+	
+	jal inputUser
+	
+	#Quebra ' - '
+	move $a1, $s0
+	jal breakIsbmAmount
+	move $s0, $a1			# atualiza o indice
+	
+	#Quantidade em estoque
+	la $a0, msgQuantBook        # parametros da função -> mensagem(showMsg)
 	jal showMsg
 	jal inputUser
 	
@@ -427,6 +440,27 @@ indexSecund30Block:
 	
 	
 # FUNCOES COLOCAR CARACTER ------------------------------------------
+breakIsbmAmount:
+# $a1 -> indice do buffer
+# Retorna o indice em $a1 
+	li $t1, ' '        	     # caracter 
+	
+	la $t0, bufferUser
+	
+	add $t0, $t0, $a1	     # endereço do proximo elemento
+	sb $t1, 0($t0)      	   
+	  
+	addi $t0, $t0, 1
+	li $t1, '-'  		     # caracter 
+	sb $t1, 0($t0)
+	
+	addi $t0, $t0, 1
+	li $t1, ' '  		      # caracter 
+	sb $t1, 0($t0)
+	
+	addi $a1, $a1, 3             # +3 indice bufferUser
+	j return
+
 commaInBuffer:
 # apos o uso tem que atualizar o valor do indice do buffer
 # Parametro
