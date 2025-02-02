@@ -45,7 +45,7 @@ space:      .byte 0x20     # espaço em branco
 main:
 
 	li $s0, 0   		# numero de elementos do bufferUser (para adicinar elemento o numero ta certo, mas para carregar é preciso diminuir 1)
-	li $s1, 0		# numero de elementos do bufferLinha (para adicinar elemento o numero ta certo, mas para carregar é preciso diminuir 1)
+	li $s1, 0		# sera usado para salvar referencia do descritor de arquivo (para poder iterar)
 	
 	#Mensagem de bem vindo e numero de matricua
 	#la $a0, msgMain
@@ -66,12 +66,25 @@ seachUserByRegister:
 	addi $sp, $sp, -4   
 	sw $ra, 0($sp)     	     # salvar referencia
 	
+	move $t0, $a2		     # salvar referencia 
+	
 	la $a0, usersFile
+	jal openFile		     # Abre o arquivo, deixando disponivel para leitura, salvando o descritor em $s1
+		
+	move $a2, $t0		     # recupera a referencia
+	
+	lw $ra, 0($sp)     	     # recupera referencia
+	addi $sp, $sp, 4   
+	
+	addi $sp, $sp, -4   
+	sw $ra, 0($sp)     	     # salvar referencia
+		
 	li $a1, 2 
 	move $a2, $a2
 	jal searchStringOnFile
 	
-	
+	lw $ra, 0($sp)     	     # recupera referencia
+	addi $sp, $sp, 4   
 	
 	lw $ra, 0($sp)     	     # recupera referencia
 	addi $sp, $sp, 4   
@@ -82,57 +95,66 @@ seachUserByRegister:
 searchStringOnFile:
 #Retorna $a1 -> 0 = encontrou , -1 = não encontrou
 #Parametros
-#$a0 -> nome do arquivo
 #$a1 -> bloco (1, 2 ou 3)
 #$a2 -> string procurada
+
 	addi $sp, $sp, -4   
 	sw $ra, 0($sp)     	     # salvar referencia
 	
 	move $t0, $a1
 	move $t1, $a2
 	
-	move $a0, $a0
 	jal readFile		     # No bufferLinha tem uma linha do arquivo (no looping vai da primeira a ultima)
-	
-	move $a1, $t0	  	     #recuperando as referencias alteradas em readFile
-	move $a2, $t1
 	
 	lw $ra, 0($sp)     	     # recupera referencia
 	addi $sp, $sp, 4   
+	
+	li $t2, -1
+	beq $a1, $t2, endSearchEndFile	     # checa se chegou no final do arquivo
+	
+	move $a1, $t0	  	     # recuperando as referencias alteradas em readFile
+	move $a2, $t1 
 		
 	move $a2, $a2 
 	li $t0, 1	  	     
-	li $t1, 2    
+	li $t4, 2    
 	li $t2, 3
-	la $a3, bufferLinha			#endereco do primiero elemento do bloco 1
+	li $a0, 0				# Indice dos buffers (para comparar os caracteres em posições corretas)
+	la $a3, bufferLinha			# endereco do primiero elemento do bloco 1
 	beq $a1, $t0, searchBlock
-	addi $a3, $a3, 31			#endereco do primiero elemento do bloco 2
-	beq $a1, $t1, searchBlock
-	addi $a3, $a3, 5			#endereco do primiero elemento do bloco 3
+	addi $a3, $a3, 31			# endereco do primiero elemento do bloco 2
+	beq $a1, $t4, searchBlock
+	addi $a3, $a3, 5			# endereco do primiero elemento do bloco 3
 	beq $a1, $t2, searchBlock
 	bgt $a1, $t2, return			# Caso, termine a busca achando
+
+endSearchEndFile:
+	lw $ra, 0($sp)     	     # recupera referencia
+	addi $sp, $sp, 4   
+	j return
 	
 searchBlock:
 #Parametros
+# $a0 -> indice dos buffers
 # $a3 -> endereço do bloco no bufferLinha
 # $a2 -> string procurada
-	lb $t0, 0($a2)		#caracteres
-	lb $t1, 0($a3)
+
+	add $t0, $a2, $a0	# posicoes dos caracteres (string procurada)
+	add $t1, $a3, $a0	# posicoes dos caracteres (string do buffer)
+
+	lb $t0, 0($t0)		# caracteres
+	lb $t1, 0($t1)
 	
-	move $t2, $a2		#salva referencia
-	move $t3, $a3
+	move $t2, $a3 		# salva referencia
 	
-	move $a2, $t0		#caracteres, que podem passar para outras funções
-	move $a3, $t1
+	move $a3, $t1		# carrega o caracter, que pode ser passado para funcao endSearch
 	
-	beq $a2, $zero, endSearch
-	bne $a2, $a3, diferents
+	beq $t0, $zero, endSearch
+	bne $t0, $a3, diferents
 	
-	move $a2, $t2		#recupera referencia
-	move $a3, $t3
+	move $a3, $t2 		# recupera referencia
 	
-	addi $a2, $a2, 1
-	addi $a3, $a3, 1
+	addi $a0, $a0, 1		# incrementa o indice
 	
 	j searchBlock
 
@@ -143,6 +165,13 @@ endSearch:
 	j diferents
 
 findString:
+	lw $ra, 0($sp)     	     # recupera referencia
+	addi $sp, $sp, 4   
+	
+	la $a0, bufferLinha
+	li $a1, 68
+	jal showBuffer
+	
 	li $a1, 0	     	# $a1 = 0, caso encontre
 	j closeFile
 
@@ -542,34 +571,25 @@ saveData:
 	
 	j closeFile
 
-readFile:
+openFile:
 # Parametros
 # $a0 -> nome do arquivo
-
 	li $v0, 13 		#solicita a  abertura do arquivo USer
 				#nome do arquivo 
 	li $a1, 0 		#leitura do arquvo
 	syscall 		#Descritor do arquivo vai para $v0
 	
-	move $s0, $v0 		#copia do descritor
+	move $s1, $v0 		#copia do descritor
 	
-	move $a0, $s0
-	li $v0, 14 		#ler o conteudo referenciado por $a0
-	la $a1, bufferLinha 	#buffer que armazena o conteudo
-	li $a2, 68 		#tamanho do buffer
+	j return
+	
+readFile:
+	move $a0, $s1		# descritor
+	li $v0, 14 		# ler o conteudo referenciado por $a1
+	la $a1, bufferLinha 	# buffer que armazena o conteudo
+	li $a2, 68 		# tamanho do buffer
 	syscall
-	
-	#TEste
-	addi $sp, $sp, -4   
-	sw $ra, 0($sp)   
-	
-	la $a0, bufferLinha
-	li $a1, 68
-	jal showBuffer
-	
-	lw $ra, 0($sp)   
-	addi $sp, $sp, 4 
-	
+ 
 	blez $v0, endOfFile	# Se não tiver mais nada para ler
 	
 	j return
