@@ -430,11 +430,11 @@ showBuffer:
 	addi $sp, $sp, -4   
 	sw $ra, 0($sp)     	     # salvar referencia
 	
-	move $t0, $a0
+	move $t7, $a0
 	
 	jal loopshowBuffer
 	
-	move $a0, $t0
+	move $a0, $t7
 	lw $ra, 0($sp)       	     # recupera referencia do chamdaor
 	addi $sp, $sp, 4    
 	
