@@ -60,6 +60,28 @@ main:
 	j endRun
 	
 checkBookAvailability:
+#Parametro
+#$a2 -> string procurada
+	addi $sp, $sp, -4   
+	sw $ra, 0($sp)     	     # salvar referencia
+	
+	jal seachBookByISBM	     # o "objeto", caso exista, estara por enteiro no buffer linha
+	
+	la $a1, bufferLinha
+	add $a0, $a0, 36		# endereço do 3 bloco do bufferLinha
+	jal loopCheckBookAvailability
+	
+	lw $ra, 0($sp)     	     # recupera referencia
+	addi $sp, $sp, 4
+
+loopCheckBookAvailability:
+#Parametro
+#$a0 -> endereço do 3 bloco do bufferLinha	
+	lb $t0, 0($a0)
+	lb $t1, '-'
+	beq $t0, $t1, showMsg
+	addi $a0, $a0, 1
+	j loopCheckBookAvailability
 	
 seachBookByISBM:
 #Parametro
@@ -566,6 +588,7 @@ inputUser:
 	j loopDisplay
 	
 loopDisplay:
+#parametro $a0 -> byte pra exibir
 	li $t0, 0xFFFF0008       # endereço do display status
 	lw $t1, 0($t0)           # status do Display, bit menos significativo = 0 -> display indisponivel
 	andi $t1, $t1, 1         
