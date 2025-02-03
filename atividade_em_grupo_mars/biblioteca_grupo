@@ -3,7 +3,8 @@
 # NOMES DOS ARQUIVOS --------------------------------------------------------------------------------------- 
 usersFile:	.asciiz "users.txt"
 booksFile:	.asciiz "books.txt"
-loanFile:	.asciiz "emprestimos.txt"	
+loanFile:	.asciiz "emprestimos.txt"
+local_livros: .asciiz "C:/Users/luism/Desktop/projeto_Assembly/lista_livros.txt"	
 
 # MENSAGENS PADROES ----------------------------------------------------------------------------------------
 msgMain: .asciiz "Bem vindo/a a livraria da Rural\n\nInforme sua matricula:\n\n"
@@ -18,6 +19,8 @@ msgNameUser: .asciiz "o nome do Estudante\n"
 msgRegistrationCode: .asciiz "o numero de matricula\n"
 msgCourseUser: .asciiz "o curso do Estudante\n"
 banner : .asciiz "TurmaDoCodigo-shell>>"
+msgAcervo: .asciiz "ACERVO: \n"
+msgFim: .asciiz  "\n---------------------------------------------"
 
 msgTeste: .asciiz "12345"
 
@@ -27,6 +30,10 @@ bufferUser:  .space 68    # 30 - primeiro bloco, 1 - virgula,  5 - segundo bloco
 bufferLinha: .space 68    # 30 - primeiro bloco, 1 - virgula,  5 - segundo bloco, 1 - virgula,  30 - segundo bloco, 1 - quebra de linha
 bufferByte: .space 1
 bufferWord: .space 4
+bufferLivro: .align 0 
+	     .space 68 
+byte: .align 0
+      .space 1
                        
 backspace:  .byte 0x08    
 space:      .byte 0x20     # espaço em branco 
@@ -58,6 +65,80 @@ main:
 	syscall 
 	
 	j endRun
+	
+	
+	
+listarLivros:  # função para listar os livros do ACERVO
+	la $a0, msgAcervo
+	li $v0, 4
+	syscall # imprima a mensgem ACERVO
+	la $a0, local_livros
+	jal abrirArquivoLeitura
+		
+	loopListarLivros: # loop que irá printar printar pegar uma linha, printar e depois limpar o buffer até não existirem mais registros no arquivo
+		jal lerArquivoLinhaLivro 
+		jal printarLinhaLivro
+		jal limparBufferLinhaLivro
+		beqz $s1,finalizarloopListarLivros
+		j loopListarLivros
+	finalizarloopListarLivros: # função para finalizar
+		la $a0, msgFim 
+		li $v0, 4
+		syscall
+		li $v0, 16 #fecha o arquivo
+		syscall
+		j main # volta para a MAIN
+		
+	
+		
+abrirArquivoLeitura:
+	#$a0 deve conter o caminho do arquivo
+	li $v0, 13
+	li $a1, 0
+	syscall
+	move $s0, $v0
+	jr $ra
+		 
+lerArquivoLinhaLivro:
+	# O Descritor do arquivo deve estar em $s0
+	move $a0, $s0
+	li $t2, 0x0A # character que representa a quebra de linha
+	li $t3, 0 #variável para iterar sobre o bufferLinha
+		
+	loopLeitura: #irá ler byte a byte do arquivo e incrimentar no bufferLinha até encontrar uma quebra de linha
+		la $a1, byte
+		li $a2,1
+		li $v0, 14
+		syscall # lê um byte do arquivo
+		lb $t1, byte #load byte para o registrador $t1
+		beqz $v0, finalizarLerArquivoLinha #se o arquivo já foi totalmente lido
+		sb $t1, bufferLivro($t3) #incrementa no buffer
+		addi $t3, $t3, 1
+		beq $t1, $t2, finalizarLerArquivoLinha # -> Se $t1 for igual a $t2, desvia para "finalizar"
+		j loopLeitura
+	finalizarLerArquivoLinha:
+		move $s1, $v0
+		jr $ra
+			 
+printarLinhaLivro: 
+	li $v0, 4
+	la $a0, bufferLivro
+	syscall
+	jr $ra
+			
+		
+			
+limparBufferLinhaLivro:
+	li $t0, 0
+	li $t1, 63
+	loopLimparBufferLinhaLivro:
+		beq $t0,$t1,finalizarLoopLimparBufferLinhaLivro
+		li $t2,0x00
+		sb $t2,bufferLivro($t0)
+		addi $t0, $t0, 1
+		j loopLimparBufferLinhaLivro
+	finalizarLoopLimparBufferLinhaLivro :
+		jr $ra
 	
 checkBookAvailability:
 #Parametro
