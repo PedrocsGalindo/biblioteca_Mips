@@ -7,7 +7,7 @@ loanFile:	.asciiz "emprestimos.txt"
 local_livros: .asciiz "C:/Users/luism/Desktop/projeto_Assembly/lista_livros.txt"	
 
 # MENSAGENS PADROES ----------------------------------------------------------------------------------------
-msgMain: .asciiz "Bem vindo/a a livraria da Rural\n\nInforme sua matricula:\n\n"
+msgMain: .asciiz "Bem vindo/a a livraria da Rural\n1.data_hora\n2.cadastrar_livro\n3.lista_livros\n4.cadastrar_usuario\nregistrar_emprestimo\n6.gerar_relatorio\n7.remover_livro\n8.remover_usuario\n9.salvar_dados\n10.formatar_dados\n11.ajustar_data\n12.registrar_devolucao"
 msgMenu: .asciiz "1- Livros\n2- Usuarios"
 msgMatriculaNaoEncontrada: .asciiz "Numero de matricula não encontrada, escreva novamente\n"
 msgQual: .asciiz "\nQual "
@@ -51,6 +51,13 @@ space:      .byte 0x20     # espaço em branco
 # $a1 : indice(clearBuffer), indice(commaInBuffer), buffer(saveData) 
 # $a2 : tamanhoString(saveData) 
 main:
+
+	la $a0, msgMain
+	li $v0, 4
+	syscall 
+	
+	li $v0, 10
+	syscall	
 
 	li $s0, 0   		# numero de elementos do bufferUser (para adicinar elemento o numero ta certo, mas para carregar é preciso diminuir 1)
 	li $s1, 0		# sera usado para salvar referencia do descritor de arquivo (para poder iterar)
