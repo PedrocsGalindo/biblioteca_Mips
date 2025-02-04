@@ -1,3 +1,6 @@
+# Pedro Cesar, Vinicius lima, Felipe paz e Paulo Daniel
+# atividade 1VA, Arquitetura de hardware, 2024.2
+
 .data
 
 # NOMES DOS ARQUIVOS --------------------------------------------------------------------------------------- 
@@ -7,9 +10,7 @@ loanFile:	.asciiz "emprestimos.txt"
 local_livros: .asciiz "C:/Users/luism/Desktop/projeto_Assembly/lista_livros.txt"	
 
 # MENSAGENS PADROES ----------------------------------------------------------------------------------------
-msgMain: .asciiz "Bem vindo/a a livraria da Rural\n1.data_hora\n2.cadastrar_livro\n3.lista_livros\n4.cadastrar_usuario\nregistrar_emprestimo\n6.gerar_relatorio\n7.remover_livro\n8.remover_usuario\n9.salvar_dados\n10.formatar_dados\n11.ajustar_data\n12.registrar_devolucao"
-msgMenu: .asciiz "1- Livros\n2- Usuarios"
-msgMatriculaNaoEncontrada: .asciiz "Numero de matricula não encontrada, escreva novamente\n"
+msgMatriculaNaoEncontrada: .asciiz "Numero de matricula nÃ£o encontrada, escreva novamente\n"
 msgQual: .asciiz "\nQual "
 msgTitleBook: .asciiz "o titulo do livro\n"
 msgAuthorBook: .asciiz "o nome do autor\n"
@@ -22,10 +23,30 @@ banner : .asciiz "TurmaDoCodigo-shell>>"
 msgAcervo: .asciiz "ACERVO: \n"
 msgFim: .asciiz  "\n---------------------------------------------"
 
+#Formato de entrada "comando arg1 arg2 arg3 ..."
+
+msgEndRun: .asciiz "endRun"
+msgCreatUser: .asciiz "cru"
+msgCreatBook: .asciiz "crb"
+msgCreatBookLoan: .asciiz "crbl"
+msgCheckBookAvailability: .asciiz "ckba" 
+
+msg:    .asciiz "Hora atual: "
+sep:    .asciiz ":"
+newl:   .asciiz "\n"  # Nova linha para formatar a saÃ­da da hora
+prompt: .asciiz "Digite a data (dia/mes/ano): "
+input:  .space 11  # EspaÃ§o para armazenar a data (10 caracteres + 1 para o terminador nulo)
+
+
+
+
+
+
 msgTeste: .asciiz "12345"
 
 # BUFFERS --------------------------------------------------------------------------------------------------
-			  # Não pode ter espaço nos espaços do bloco (talvez depois melhorar a logica para suportar isso)
+			  # Nao pode ter espao nos espaÃ§os do bloco (talvez depois melhorar a logica para suportar isso)
+bufferInput:  .space 100  # Comando do usuario 
 bufferUser:  .space 68    # 30 - primeiro bloco, 1 - virgula,  5 - segundo bloco, 1 - virgula,  30 - segundo bloco, 1 - quebra de linha
 bufferLinha: .space 68    # 30 - primeiro bloco, 1 - virgula,  5 - segundo bloco, 1 - virgula,  30 - segundo bloco, 1 - quebra de linha
 bufferByte: .space 1
@@ -36,59 +57,74 @@ byte: .align 0
       .space 1
                        
 backspace:  .byte 0x08    
-space:      .byte 0x20     # espaço em branco 
+space:      .byte 0x20     # espaco em branco 
 
 .text
 .globl main
 
 # REGISTRADORES FIXOS ----------------------------------------------------------------------------------------
-# Sempre que for usar os registradores fixos é necessario varificar se vai alterar algum outro valor, ou caso va usar alguma função que tenha esses registradores (necessario manter uma copia temporaria)
+# Sempre que for usar os registradores fixos  necessario varificar se vai alterar algum outro valor, ou caso va usar alguma funÃ§Ã£o que tenha esses registradores (necessario manter uma copia temporaria)
 # Caso necessario antes do input tem que salvar o valor de $a0 
 
 # $s0 : indice do bufferUser, indice do bufferUser(inputUser), 
 # $s1 : indice do bufferLinha
 # $a0 : buffer(clearBuffer), buffer(commaInBuffer), arquivo(saveData), mensagem(showMsg), contador(cleardDisplay), caracterEscrito(inputUser)
 # $a1 : indice(clearBuffer), indice(commaInBuffer), buffer(saveData) 
-# $a2 : tamanhoString(saveData) 
+# $a2 : tamanhoString(saveData)
 main:
 
-	la $a0, msgMain
-	li $v0, 4
-	syscall 
-	
-	li $v0, 10
-	syscall	
-
-	li $s0, 0   		# numero de elementos do bufferUser (para adicinar elemento o numero ta certo, mas para carregar é preciso diminuir 1)
+	li $s0, 0   		# numero de elementos do bufferUser (para adicinar elemento o numero ta certo, mas para carregar Ã© preciso diminuir 1)
 	li $s1, 0		# sera usado para salvar referencia do descritor de arquivo (para poder iterar)
 	
-	#Mensagem de bem vindo e numero de matricua
-	#la $a0, msgMain
-	#jal showMsg
+	la $a0, banner
+	jal showMsg
+	jal inputUser
 	
+	la $a0, bufferInput
+	la $a1, msgEndRun
+	jal checkUserFunc
+	beqz $a1, endRun
 	
-	li $v0, 1
-	move $a0, $a1
-	syscall 
+	la $a0, bufferInput
+	la $a1, msgCreatUser
+	jal checkUserFunc
+	beqz $a1 creatUser
+	
+	la $a0, bufferInput
+	la $a1, msgCreatBook
+	jal checkUserFunc
+	beqz $a1, creatBook
+	
+	la $a0, bufferInput
+	la $a1, msgCreatBookLoan
+	jal checkUserFunc
+	#beqz $a1, creatBookLoan
+	
+	la $a0, bufferInput
+	la $a1, msgCheckBookAvailability
+	jal checkUserFunc
+	beqz $a1, checkBookAvailability
+	
+	#jal solicitarhora #para pegar a hora atual
 	
 	j endRun
 	
 	
 	
-listarLivros:  # função para listar os livros do ACERVO
+listarLivros:  # funï¿½ï¿½o para listar os livros do ACERVO
 	la $a0, msgAcervo
 	li $v0, 4
 	syscall # imprima a mensgem ACERVO
 	la $a0, local_livros
 	jal abrirArquivoLeitura
 		
-	loopListarLivros: # loop que irá printar printar pegar uma linha, printar e depois limpar o buffer até não existirem mais registros no arquivo
+	loopListarLivros: # loop que irï¿½ printar printar pegar uma linha, printar e depois limpar o buffer atï¿½ nï¿½o existirem mais registros no arquivo
 		jal lerArquivoLinhaLivro 
 		jal printarLinhaLivro
 		jal limparBufferLinhaLivro
 		beqz $s1,finalizarloopListarLivros
 		j loopListarLivros
-	finalizarloopListarLivros: # função para finalizar
+	finalizarloopListarLivros: # funï¿½ï¿½o para finalizar
 		la $a0, msgFim 
 		li $v0, 4
 		syscall
@@ -110,15 +146,15 @@ lerArquivoLinhaLivro:
 	# O Descritor do arquivo deve estar em $s0
 	move $a0, $s0
 	li $t2, 0x0A # character que representa a quebra de linha
-	li $t3, 0 #variável para iterar sobre o bufferLinha
+	li $t3, 0 #variï¿½vel para iterar sobre o bufferLinha
 		
-	loopLeitura: #irá ler byte a byte do arquivo e incrimentar no bufferLinha até encontrar uma quebra de linha
+	loopLeitura: #irï¿½ ler byte a byte do arquivo e incrimentar no bufferLinha atï¿½ encontrar uma quebra de linha
 		la $a1, byte
 		li $a2,1
 		li $v0, 14
-		syscall # lê um byte do arquivo
+		syscall # lï¿½ um byte do arquivo
 		lb $t1, byte #load byte para o registrador $t1
-		beqz $v0, finalizarLerArquivoLinha #se o arquivo já foi totalmente lido
+		beqz $v0, finalizarLerArquivoLinha #se o arquivo jï¿½ foi totalmente lido
 		sb $t1, bufferLivro($t3) #incrementa no buffer
 		addi $t3, $t3, 1
 		beq $t1, $t2, finalizarLerArquivoLinha # -> Se $t1 for igual a $t2, desvia para "finalizar"
@@ -147,26 +183,62 @@ limparBufferLinhaLivro:
 	finalizarLoopLimparBufferLinhaLivro :
 		jr $ra
 	
+checkUserFunc:
+# parametros
+# $a0 -> endereco do buffer
+# $a1 -> string comparar com primeira palavra do buffer
+# retorna
+# $a1 -> 0 = iguais
+
+	lb $t0, 0($a0)
+	lb $t1, 0($a1)
+	beq $t1, $zero, termino		# verifica se a palavra procurada chegou ao fim
+	bne $t0, $t1, diferente
+	addi $a0, $a0, 1
+	addi $a1, $a1, 1
+	j checkUserFunc
+	
+termino:
+	li $t2, 0x20	     	  # virgula
+	beq $t0, $t2, equals      # verifica se a palavra procurada no bufferLinha chegou ao fim
+	beqz $t0, equals     	  # secundo bloco temrina em virgula, nao tem espaco vazio
+	j diferente
+	
+equals:
+	li $a1, 0
+	j return
+	
+diferente:
+	li $a1, 1
+	j return
+
 checkBookAvailability:
-#Parametro
-#$a2 -> string procurada
+# A string procurada sera o primeiro argumento do bufferInput
+
 	addi $sp, $sp, -4   
 	sw $ra, 0($sp)     	     # salvar referencia
 	
+	la $a2, bufferInput
+	addi $a2, $a2, 5
 	jal seachBookByISBM	     # o "objeto", caso exista, estara por enteiro no buffer linha
-	
+
 	la $a1, bufferLinha
-	add $a0, $a0, 36		# endereço do 3 bloco do bufferLinha
+	add $a0, $a1, 36		# endereco do 3 bloco do bufferLinha
+	la $a2, bufferInput
+	addi $a2, $a2, 5
 	jal loopCheckBookAvailability
 	
-	lw $ra, 0($sp)     	     # recupera referencia
 	addi $sp, $sp, 4
+	lw $ra, 0($sp)     	   
+	
+	j return
 
 loopCheckBookAvailability:
 #Parametro
-#$a0 -> endereço do 3 bloco do bufferLinha	
+#$a2 -> string procurada
+#$a0 -> endereco do 3 bloco do bufferLinha	
 	lb $t0, 0($a0)
-	lb $t1, '-'
+	li $t1, '-'
 	beq $t0, $t1, showMsg
 	addi $a0, $a0, 1
 	j loopCheckBookAvailability
@@ -235,7 +307,7 @@ seachUserByRegister:
 
 	
 searchStringOnFile:
-#Retorna $a1 -> 0 = encontrou , -1 = não encontrou
+#Retorna $a1 -> 0 = encontrou , -1 = nao encontrou
 #Parametros
 #$a1 -> bloco (1, 2 ou 3)
 #$a2 -> string procurada
@@ -261,7 +333,7 @@ searchStringOnFile:
 	li $t0, 1	  	     
 	li $t4, 2    
 	li $t2, 3
-	li $a0, 0				# Indice dos buffers (para comparar os caracteres em posições corretas)
+	li $a0, 0				# Indice dos buffers (para comparar os caracteres em posiÃ§Ãµes corretas)
 	la $a3, bufferLinha			# endereco do primiero elemento do bloco 1
 	beq $a1, $t0, searchBlock
 	addi $a3, $a3, 31			# endereco do primiero elemento do bloco 2
@@ -278,7 +350,7 @@ endSearchEndFile:
 searchBlock:
 #Parametros
 # $a0 -> indice dos buffers
-# $a3 -> endereço do bloco no bufferLinha
+# $a3 -> endereco do bloco no bufferLinha
 # $a2 -> string procurada
 
 	add $t0, $a2, $a0	# posicoes dos caracteres (string procurada)
@@ -296,13 +368,13 @@ searchBlock:
 	
 	move $a3, $t2 		# recupera referencia
 	
-	addi $a0, $a0, 1		# incrementa o indice
+	addi $a0, $a0, 1	# incrementa o indice
 	
 	j searchBlock
 
 endSearch:
 	li $t4, 0x2C		     # virgula
-	beq $a3, $t4, findString     # secundo bloco temrina em virgula, não tem espaço vazio
+	beq $a3, $t4, findString     # secundo bloco temrina em virgula, nÃ£o tem espaÃ§o vazio
 	beq $a3, $zero, findString   # verifica se ambas as palavras terminaram
 	j diferents
 
@@ -310,9 +382,9 @@ findString:
 	addi $sp, $sp, -4
 	lw $ra, 0($sp)     	     # recupera referencia
 	 
-	la $a0, bufferLinha
-	li $a1, 68
-	jal showBuffer
+	#la $a0, bufferLinha
+	#li $a1, 68
+	#jal showBuffer
 	
 	addi $sp, $sp, 4
 	lw $ra, 0($sp) 
@@ -322,229 +394,247 @@ findString:
 
 diferents:
 	j searchStringOnFile
+#FUNCOES PARA DATA---------------------------------------------------------------------------------------------------------------------------------------------------
 
+solicitarhora: #ele entrega a hora e solicita a data 
+        # ObtÃ©m o tempo atual em milissegundos (syscall 30)
+        li $v0, 30      # syscall 30: obtÃ©m o tempo do sistema (em milissegundos desde a Ã©poca)
+        syscall
+        move $t0, $a0   # Armazena a parte baixa do tempo em $t0 (milissegundos)
+        move $t1, $a1   # Armazena a parte alta do tempo em $t1 (milissegundos)
+
+        # Converte para segundos totais (milissegundos / 1000)
+        li $t2, 1000    # Carrega o valor 1000 em $t2 (usado como divisor para converter milissegundos para segundos)
+        divu $t0, $t2   # Divide a parte baixa (milissegundos) por 1000
+        mflo $t3        # Armazena o resultado da divisÃ£o (segundos totais) em $t3
+        mfhi $t4        # Armazena o resto da divisÃ£o (milissegundos restantes) em $t4
+        
+        divu $t1, $t2   # Divide a parte alta do tempo (milissegundos) por 1000 para converter para segundos
+        mflo $t5        # Armazena os segundos da parte alta em $t5
+
+        add $t3, $t3, $t5 # Soma os segundos da parte baixa e alta, totalizando os segundos completos em $t3
+
+        # Calcula as horas no formato UTC
+        li $t6, 3600    # Carrega o valor 3600 (segundos em 1 hora) em $t6
+        divu $t3, $t6   # Divide os segundos totais por 3600 para calcular as horas
+        mflo $t7        # Armazena o nÃºmero de horas em $t7
+        rem $t7, $t7, 24  # Calcula o resto da divisÃ£o para garantir que as horas estejam no intervalo 0-23 (hora do dia)
+
+        # Ajuste de fuso horÃ¡rio: subtrai 1 hora e 13 minutos (4380 segundos)
+        li $t8, 4380    # Carrega o valor 4380 (1 hora e 13 minutos em segundos) em $t8
+        sub $t3, $t3, $t8  # Subtrai 4380 segundos (ajuste de fuso horÃ¡rio UTC-1h13min)
+
+        # Subtrai mais 3 horas (10.800 segundos) do tempo
+        li $t9, 10800   # Carrega o valor 10800 (3 horas em segundos) em $t9
+        sub $t3, $t3, $t9  # Subtrai 10.800 segundos do total de segundos (ajuste de fuso horÃ¡rio UTC-3h)
+
+        # Calcula novas horas apÃ³s os ajustes
+        divu $t3, $t6   # Divide os segundos restantes por 3600 para calcular as horas ajustadas
+        mflo $t7        # Armazena o nÃºmero de horas ajustadas em $t7
+        rem $t7, $t7, 24  # Calcula o resto da divisÃ£o para garantir que as horas ajustadas estejam no intervalo 0-23
+
+        # Imprimir a hora ajustada
+        li $v0, 4       # CÃ³digo da syscall para imprimir uma string
+        la $a0, msg     # EndereÃ§o da mensagem "Hora ajustada: "
+        syscall
+
+        # Imprime as horas
+        move $a0, $t7   # Move o valor das horas ajustadas para $a0
+        li $v0, 1       # CÃ³digo da syscall para imprimir um nÃºmero inteiro
+        syscall
+
+        # Imprime ":" (separador)
+        li $v0, 4       # CÃ³digo da syscall para imprimir uma string
+        la $a0, sep     # EndereÃ§o do separador ":"
+        syscall
+
+        # Calcula os minutos
+        li $t6, 60      # Carrega o valor 60 (segundos em 1 minuto) em $t6
+        divu $t3, $t6   # Divide os segundos restantes por 60 para calcular os minutos
+        mfhi $t8        # Armazena os segundos restantes apÃ³s calcular as horas em $t8
+        mflo $t9        # Armazena os minutos totais em $t9
+        rem $t9, $t9, 60  # Calcula os minutos atuais, no intervalo 0-59
+
+        # Imprime os minutos
+        move $a0, $t9   # Move o valor dos minutos para $a0
+        li $v0, 1       # CÃ³digo da syscall para imprimir um nÃºmero inteiro
+        syscall
+
+        # Imprime ":" (separador)
+        li $v0, 4       # CÃ³digo da syscall para imprimir uma string
+        la $a0, sep     # EndereÃ§o do separador ":"
+        syscall
+
+        # Imprime os segundos restantes
+        move $a0, $t8   # Move o valor dos segundos restantes para $a0
+        li $v0, 1       # CÃ³digo da syscall para imprimir um nÃºmero inteiro
+        syscall
+
+        # Imprime uma nova linha
+        li $v0, 4       # CÃ³digo da syscall para imprimir uma string
+        la $a0, newl    # EndereÃ§o da string de nova linha
+        syscall
+
+        # Solicitar a data ao usuÃ¡rio
+        li $v0, 4         # CÃ³digo da syscall para imprimir uma string
+        la $a0, prompt    # EndereÃ§o da string do prompt
+        syscall
+
+        # Ler a entrada do usuÃ¡rio (data)
+        li $v0, 8         # CÃ³digo da syscall para ler uma string
+        la $a0, input     # EndereÃ§o onde a string serÃ¡ armazenada
+        li $a1, 11        # Limite de caracteres (10 para a data e 1 para o terminador nulo)
+        syscall
+
+        # Aqui vocÃª pode processar ou validar a data conforme necessÃ¡rio
+
+        jr $ra  # Retorna da funÃ§Ã£o
+
+bufferInputToUser:
+# $a0 -> indice bufferUser
+# $a1 -> indice bufferInput
+	la $t1, bufferInput
+	la $t0, bufferUser
+	add $t1, $t1, $a1	
+	add $t0, $t0, $a0
+	
+	lb $t3, 0($t1)		# recebe o caracter
+	li $t4, ' '
+	beq $t3, $t4, return	# se tiver acabado retorna
+	beqz $t3, return
+	sb $t3, 0($t0)		# salva o caracter
+	
+	addi $a0, $a0, 1 
+	addi $a1, $a1, 1
+	
+	j bufferInputToUser
+	
 #FUNCOES DE CRIACAO DE ELEMENTOS -----------------------------------------------------------------------------------------------------------------------
 creatUser:
 	addi $sp, $sp, -4   
 	sw $ra, 0($sp)     	     # salvar referencia
 	
+	li $a0, 0 		     # indiceUser
+	li $a1, 4		     # indiceInput
+	
 	#Nome
-	la $a0, msgQual          # parametros da função -> mensagem(showMsg)
-	jal showMsg
-	la $a0, msgNameUser          # parametros da função -> mensagem(showMsg)
-	jal showMsg
+	jal bufferInputToUser
 	
-	jal inputUser		   # Altera o indice
+	addi $a1, $a1, 1
+	move $t2, $a1
 	
-	#TESTE
-	move $a1, $s0
-	jal index30Block
-	move $s0, $a1			# atualiza o indice
-
-	la $a0, bufferUser  	     # parametros da função -> buffer(commaInBuffer) 
-	move $a1, $s0		     # parametros da função  -> indice do buffer (commaInBuffer)
+	la $a0, bufferUser  	     # parametros da funcao -> buffer(commaInBuffer) 
+	li $a1, 30		     # parametros da funcao  -> indice do buffer (commaInBuffer)
 	jal commaInBuffer
-	addi $s0, $s0, 1
+	
+	move $a1, $t2
 	
 	#Matricula
-	la $a0, msgQual          # parametros da função -> mensagem(showMsg)
-	jal showMsg
-	la $a0, msgRegistrationCode  # parametros da função -> mensagem(showMsg)
-	jal showMsg
+	li $a0, 31		     # indiceUser
+	jal bufferInputToUser
+	addi $a1, $a1, 1
+	move $t2, $a1
 	
-	jal inputUser
-	
-	move $a1, $s0
-	jal index5Block
-	move $s0, $a1			# atualiza o indice
-	
-	la $a0, bufferUser  	     # parametros da função -> buffer(commaInBuffer)
-	move $a1, $s0		     # parametros da função  -> indice do buffer (commaInBuffer)
+	la $a0, bufferUser  	     # parametros da funaco -> buffer(	InBuffer)
+	li $a1, 36		     # parametros da funcao  -> indice do buffer (commaInBuffer)
 	jal commaInBuffer
-	addi $s0, $s0, 1
+	
+	move $a1, $t2
 	
 	#Curso
-	la $a0, msgQual          # parametros da função -> mensagem(showMsg)
-	jal showMsg
-	la $a0, msgCourseUser        # parametros da função -> mensagem(showMsg)
-	jal showMsg
-	jal inputUser
-	
-	move $a1, $s0
-	jal indexSecund30Block
-	move $s0, $a1			# atualiza o indice
+	li $a0, 37		     # indiceUser
+	jal bufferInputToUser
 	
 	#Quebra de linha
 	la $a0, bufferUser
-	add $a0, $a0, $s0
+	addi $a0, $a0, 67
 	li $t0, '\n'
 	sb $t0, 0($a0)
 	addi $s0, $s0,1
 	
 	#Mostrar Cadastro
 	la $a0, bufferUser
-	move $a1, $s0
+	li $a1, 68
 	jal showBuffer
 	
-	la $a0, usersFile	     # parametros da função -> arquivo(saveData) 
-	la $a1, bufferUser	     # parametros da função -> buffer(saveData) 
-	move $a2, $s0	 	     # parametros da função -> tamanhoString(saveData) 
+	la $a0, usersFile	     # parametros da funÃ§Ã£o -> arquivo(saveData) 
+	la $a1, bufferUser	     # parametros da funÃ§Ã£o -> buffer(saveData) 
+	li $a2, 68	 	     # parametros da funÃ§Ã£o -> tamanhoString(saveData) 
 	jal saveData
 	
-	jal clearBufferUser
+	
 	
 	lw $ra, 0($sp)       	     # recupera referencia do chamdaor
 	addi $sp, $sp, 4    
 	
 	j return
-
-creatBookLoan:
-	addi $sp, $sp, -4   
-	sw $ra, 0($sp)     	     # salvar referencia
-
-	#Livro
-	la $a0, msgQual          # parametros da função -> mensagem(showMsg)
-	jal showMsg
-	la $a0, msgTitleBook          # parametros da função -> mensagem(showMsg)
-	jal showMsg
-	jal showMsg
-	
-	jal inputUser		   # Altera o indice
-	
-	move $a1, $s0
-	jal index30Block
-	move $s0, $a1			# atualiza o indice
-
-	la $a0, bufferUser  	     # parametros da função -> buffer(commaInBuffer) 
-	move $a1, $s0		     # parametros da função  -> indice do buffer (commaInBuffer)
-	jal commaInBuffer
-	addi $s0, $s0, 1
-	
-	#User_Registration
-	la $a0, msgQual          # parametros da função -> mensagem(showMsg)
-	jal showMsg
-	la $a0, msgRegistrationCode          # parametros da função -> mensagem(showMsg)
-	jal showMsg
-	
-	jal inputUser
-	
-	move $a1, $s0
-	jal index5Block
-	move $s0, $a1			# atualiza o indice
-	
-	la $a0, bufferUser  	     # parametros da função -> buffer(commaInBuffer)
-	move $a1, $s0		     # parametros da função  -> indice do buffer (commaInBuffer)
-	jal commaInBuffer
-	addi $s0, $s0, 1
-	
-	#Data_Retirada e Data_Devolução juntos no mesmo bloco, separados por espaço
-	#Data_Retirada 
-	
-	#Data_Devolução
-	
-	#Formatar Data_Retirada e Data_Devolução juntos
-	move $a1, $s0
-	jal indexSecund30Block
-	move $s0, $a1			# atualiza o indice
-	
-	#Quebra de linha
-	la $a0, bufferUser
-	add $a0, $a0, $s0
-	li $t0, '\n'
-	sb $t0, 0($a0)
-	addi $s0, $s0,1
-
-	#Mostrar Cadastro
-	la $a0, bufferUser
-	move $a1, $s0
-	jal showBuffer
-	
-	la $a0, booksFile	     # parametros da função -> arquivo(saveData) 
-	la $a1, bufferUser	     # parametros da função -> buffer(saveData) 
-	move $a2, $s0	 	     # parametros da função -> tamanhoString(saveData) 
-	jal saveData
-	
-	jal clearBufferUser
-	
-	lw $ra, 0($sp)       	     # recupera referencia do chamdaor
-	addi $sp, $sp, 4    
-			
-	j return	
 
 creatBook:
 	addi $sp, $sp, -4   
 	sw $ra, 0($sp)     	     # salvar referencia
 	
-	#Titulo
-	la $a0, msgQual          # parametros da função -> mensagem(showMsg)
-	jal showMsg
-	la $a0, msgTitleBook     # parametros da função -> mensagem(showMsg)
-	jal showMsg
+	li $a0, 0 		     # indiceUser
+	li $a1, 4		     # indiceInput
 	
-	jal inputUser		   # Altera o indice
+	#livro
+	jal bufferInputToUser
 	
-	move $a1, $s0
-	jal index30Block
-	move $s0, $a1			# atualiza o indice
-
-	la $a0, bufferUser  	     # parametros da função -> buffer(commaInBuffer) 
-	move $a1, $s0		     # parametros da função  -> indice do buffer (commaInBuffer)
+	addi $a1, $a1, 1
+	move $t2, $a1
+	
+	la $a0, bufferUser  	     # parametros da funcao -> buffer(commaInBuffer) 
+	li $a1, 30		     # parametros da funcao  -> indice do buffer (commaInBuffer)
 	jal commaInBuffer
-	addi $s0, $s0, 1
 	
-	#ISBN
-	la $a0, msgQual          # parametros da função -> mensagem(showMsg)
-	jal showMsg
-	la $a0, msgISBNBook        # parametros da função -> mensagem(showMsg)
-	jal showMsg
-	jal inputUser
+	move $a1, $t2
 	
-	move $a1, $s0
-	jal index5Block
-	move $s0, $a1			# atualiza o indice
+	#ISBM
+	li $a0, 31		     # indiceUser
+	jal bufferInputToUser
+	addi $a1, $a1, 1
+	move $t2, $a1
 	
-	la $a0, bufferUser  	     # parametros da função -> buffer(commaInBuffer)
-	move $a1, $s0		     # parametros da função  -> indice do buffer (commaInBuffer)
+	la $a0, bufferUser  	     # parametros da funaco -> buffer(commaInBuffer)
+	li $a1, 36		     # parametros da funcao  -> indice do buffer (commaInBuffer)
 	jal commaInBuffer
-	addi $s0, $s0, 1
+	
+	move $a1, $t2		     # indice do Input
 	
 	#Autor
-	la $a0, msgQual          # parametros da função -> mensagem(showMsg)
-	jal showMsg
-	la $a0, msgAuthorBook  # parametros da função -> mensagem(showMsg)
-	jal showMsg
+	li $a0, 37		     # indiceUser
+	move $a3, $a1		     # indice atual do bufferInput, sera usado para calcular quantos caracteres foram lidos
+	jal bufferInputToUser
 	
-	jal inputUser
+	addi $a1, $a1, 1
+	move $t2, $a1		     # indice do Input
 	
-	#Quebra ' - '
-	move $a1, $s0
+	sub $a3, $a1, $a3	     # numero de caracteres do autor
+	add $a1, $a3, 36	     # indice do ' - '
+	
 	jal breakIsbmAmount
-	move $s0, $a1			# atualiza o indice
 	
-	#Quantidade em estoque
-	la $a0, msgQuantBook        # parametros da função -> mensagem(showMsg)
-	jal showMsg
-	jal inputUser
+	move $t3, $a1
+	move $a1, $t2		     # indice do Input
 	
-	move $a1, $s0
-	jal indexSecund30Block
-	move $s0, $a1			# atualiza o indice
+	#Quantidade de livros
+	move $a0, $t3		     # indiceUser
+	jal bufferInputToUser
 	
 	#Quebra de linha
 	la $a0, bufferUser
-	add $a0, $a0, $s0
+	addi $a0, $a0, 67
 	li $t0, '\n'
 	sb $t0, 0($a0)
 	addi $s0, $s0,1
 	
 	#Mostrar Cadastro
 	la $a0, bufferUser
-	move $a1, $s0
+	li $a1, 68
 	jal showBuffer
 	
-	la $a0, booksFile	     # parametros da função -> arquivo(saveData) 
-	la $a1, bufferUser	     # parametros da função -> buffer(saveData) 
-	move $a2, $s0	 	     # parametros da função -> tamanhoString(saveData) 
+	la $a0, booksFile	     # parametros da funÃ§Ã£o -> arquivo(saveData) 
+	la $a1, bufferUser	     # parametros da funÃ§Ã£o -> buffer(saveData) 
+	li $a2, 68	 	     # parametros da funÃ§Ã£o -> tamanhoString(saveData) 
 	jal saveData
 	
 	jal clearBufferUser
@@ -553,34 +643,88 @@ creatBook:
 	addi $sp, $sp, 4    
 	
 	j return
-
+	
+creatBookLoan:
+	addi $sp, $sp, -4   
+	sw $ra, 0($sp)     	     # salvar referencia
+	
+	li $a0, 0 		     # indiceUser
+	li $a1, 4		     # indiceInput
+	
+	#Matricula
+	jal bufferInputToUser
+	
+	addi $a1, $a1, 1
+	move $t2, $a1
+	
+	la $a0, bufferUser  	     # parametros da funcao -> buffer(commaInBuffer) 
+	li $a1, 30		     # parametros da funcao  -> indice do buffer (commaInBuffer)
+	jal commaInBuffer
+	
+	move $a1, $t2
+	
+	#ISBM
+	li $a0, 31		     # indiceUser
+	jal bufferInputToUser
+	addi $a1, $a1, 1
+	move $t2, $a1
+	
+	la $a0, bufferUser  	     # parametros da funaco -> buffer(commaInBuffer)
+	li $a1, 36		     # parametros da funcao  -> indice do buffer (commaInBuffer)
+	jal commaInBuffer
+	
+	move $a1, $t2		     # indice do Input
+	
+	#Data atual
+	li $a0, 37		     # indiceUser
+	move $a3, $a1		     # indice atual do bufferInput, sera usado para calcular quantos caracteres foram lidos
+	jal bufferInputToUser
+	
+	addi $a1, $a1, 1
+	move $t2, $a1		     # indice do Input
+	
+	sub $a3, $a1, $a3	     # numero de caracteres do autor
+	add $a1, $a3, 36	     # indice do ' - '
+	
+	jal breakIsbmAmount
+	
+	move $t3, $a1
+	move $a1, $t2		     # indice do Input
+	
+	#Quantidade de livros
+	move $a0, $t3		     # indiceUser
+	jal calculateReturnDate
+	jal bufferInputToUser
+	
+	#Quebra de linha
+	la $a0, bufferUser
+	addi $a0, $a0, 67
+	li $t0, '\n'
+	sb $t0, 0($a0)
+	addi $s0, $s0,1
+	
+	#Mostrar Cadastro
+	la $a0, bufferUser
+	li $a1, 68
+	jal showBuffer
+	
+	la $a0, booksFile	     # parametros da funÃ§Ã£o -> arquivo(saveData) 
+	la $a1, bufferUser	     # parametros da funÃ§Ã£o -> buffer(saveData) 
+	li $a2, 68	 	     # parametros da funÃ§Ã£o -> tamanhoString(saveData) 
+	jal saveData
+	
+	jal clearBufferUser
+	
+	lw $ra, 0($sp)       	     # recupera referencia do chamdaor
+	addi $sp, $sp, 4    
+	
+	j return
+	
+calculateReturnDate:
+# parametro
+# $a0 -> endereï¿½o da onde deve ser impresso (presica voltar 12 posiï¿½ï¿½es par apegar a data atual)
 # FUNCOES MUITO USADAS --------------------------------------------------------------------------------------------------------------------
 
-# FUNCOES DE FORMATACAO DE DADOS ------------------------------------
-
-index30Block:
-# Indice vai para +30
-# Parametro
-
-# $a1 - > indice
-	li $a1, 30			# atualiza o indice
-	j return
-
-index5Block:
-# Indice vai para +5
-# Parametro
-# $a1 - > indice
-	li $a1, 36			# atualiza o indice
-	j return
-	
-indexSecund30Block:
-# Indice vai para +30
-# Parametro
-# $a1 - > indice
-	li $a1, 67			# atualiza o indice
-	j return
-	
-	
 # FUNCOES COLOCAR CARACTER ------------------------------------------
 breakIsbmAmount:
 # $a1 -> indice do buffer
@@ -589,7 +733,7 @@ breakIsbmAmount:
 	
 	la $t0, bufferUser
 	
-	add $t0, $t0, $a1	     # endereço do proximo elemento
+	add $t0, $t0, $a1	     # endereÃ§o do proximo elemento
 	sb $t1, 0($t0)      	   
 	  
 	addi $t0, $t0, 1
@@ -629,7 +773,7 @@ barInBuffer:
 # FUNCOES DE BUFFER ------------------------------------------
 
 showBuffer:
-# Parâmetros
+# ParÃ¢metros
 # $a0 -> buffer
 # $a1 -> indice (numero de elementos no buffer)
 	addi $sp, $sp, -4   
@@ -652,24 +796,23 @@ loopshowBuffer:
 	li $v0, 11          # imprimir caractere
 	syscall
 	move $a0, $t1
-	addi $a0, $a0, 1    # Avança para o próximo caractere
-	beqz $a1, return    # Se o índice for 0, chegou no ultimo
-	j loopshowBuffer       # Continua a exibição
+	addi $a0, $a0, 1    # AvanÃ§a para o prÃ³ximo caractere
+	beqz $a1, return    # Se o Ã­ndice for 0, chegou no ultimo
+	j loopshowBuffer       # Continua a exibiÃ§Ã£o
 
 # FUNCOES DE MMIO -----------------------------------------------
-
 inputUser:
-	li $t0, 0xFFFF0000         # endereço do keyboard status
+	li $t0, 0xFFFF0000         # endereÃ§o do keyboard status
 	lw $t1, 0($t0)             # status do teclado, bit menos significativo = 0 -> sem caracter indisponivel
-	andi $t1, $t1, 1           # operação AND para verificar o bit menos significativo
+	andi $t1, $t1, 1           # operaÃ§Ã£o AND para verificar o bit menos significativo
 	beq $t1, $zero, inputUser     
 
 	# le caractere do teclado
-	li $t0, 0xFFFF0004         # endereço do keyboard data
+	li $t0, 0xFFFF0004         # endereÃ§o do keyboard data
 	lw $a0, 0($t0)             # carrega o caracter
 	li $t3, 0x0A 		   # Enter
 	beq $a0, $t3, return
-	la $t2, bufferUser 
+	la $t2, bufferInput 
 	add $t2, $t2, $s0
 	sb $a0, 0($t2)   	    # salva no buffer
 	addi $s0, $s0, 1	    # +1 indice bufferUser
@@ -677,12 +820,12 @@ inputUser:
 	
 loopDisplay:
 #parametro $a0 -> byte pra exibir
-	li $t0, 0xFFFF0008       # endereço do display status
+	li $t0, 0xFFFF0008       # endereÃ§o do display status
 	lw $t1, 0($t0)           # status do Display, bit menos significativo = 0 -> display indisponivel
 	andi $t1, $t1, 1         
 	beq $t1, $zero, loopDisplay
 
-	li $t0, 0xFFFF000C       # endereço do display data
+	li $t0, 0xFFFF000C       # endereÃ§o do display data
 	sw $a0, 0($t0)           # escrita	
 	j inputUser      
 
@@ -691,16 +834,16 @@ cleardDisplay:
 	j clearLoop
 	
 clearLoop:
-	li $t1, 0xFFFF0008         # endereço do display status
+	li $t1, 0xFFFF0008         # endereÃ§o do display status
 	lw $t2, 0($t1)             # status do display
 	andi $t2, $t2, 1
 	beq $t2, $zero, clearLoop  # se ocupado, espera
-	li $t1, 0xFFFF000C         # endereço do display data
+	li $t1, 0xFFFF000C         # endereÃ§o do display data
 	
 	li $t0, 0x0A               # pula linha
 	sw $t0, 0($t1)             # escreve
 	subi $a0, $a0, 1           # -1 contador
-	bgtz $a0, clearLoop        # Repete até o contador chegar a 0
+	bgtz $a0, clearLoop        # Repete atÃ© o contador chegar a 0
 
  	jr $ra    
  	
@@ -709,7 +852,7 @@ showMsg:
 # $a0 -> mensagem
 	lb $t0, 0($a0)		  #caractere
 	beqz $t0, return	  #verifica se terminou
-	li $t1, 0xFFFF0008        # endereço do display status
+	li $t1, 0xFFFF0008        # endereÃ§o do display status
 	j loopDisplaymsg    	  #loop escrita
 	
 loopDisplaymsg:
@@ -717,16 +860,16 @@ loopDisplaymsg:
 	andi $t2, $t2, 1         
 	beq $t2, $zero, loopDisplaymsg  # se ocupado, espera
 
-	li $t1, 0xFFFF000C       # endereço do display data
+	li $t1, 0xFFFF000C       # endereÃ§o do display data
 	sw $t0, 0($t1)           # escreve
 
-	addi $a0, $a0, 1  	 # próximo caractere
+	addi $a0, $a0, 1  	 # proximo caractere
 	j showMsg    
 
 saveData:
-# Parâmetros
+# ParÃ¢metros
 # $a0 -> Nome do arquivo
-# $a1 -> Endereço da string a ser salva (buffer)
+# $a1 -> Endereco da string a ser salva (buffer)
 # $a2 -> Tamanho da string a ser salva
 
 	move $t0, $a1
@@ -742,7 +885,7 @@ saveData:
 	# Escrita no arquivo
 	li $v0, 15           # escrita
 	move $a0, $t3        # descritor do arquivo
-	move $a1, $t0        # endereço String
+	move $a1, $t0        # endereÃ§o String
 	move $a2, $t1        # tamanho String
 	syscall
 	
@@ -767,12 +910,12 @@ readFile:
 	li $a2, 68 		# tamanho do buffer
 	syscall
  
-	blez $v0, endOfFile	# Se não tiver mais nada para ler
+	blez $v0, endOfFile	# Se nao tiver mais nada para ler
 	
 	j return
 	
 endOfFile:
-	li $a1, -1		# Caso chegue ao final do arquivo, não encontrou a string 
+	li $a1, -1		# Caso chegue ao final do arquivo, nÃ£o encontrou a string 
 	j closeFile
 	
 closeFile:
@@ -800,8 +943,8 @@ clearBufferUser:
 	j return
 
 loopClearBuffer:
-# $a0 -> endereço buffer
-# $a1 -> endereço buffer + contador
+# $a0 -> endereÃ§o buffer
+# $a1 -> endereÃ§o buffer + contador
 	li $t0, 0x00		     # Nulo	
 	sb $t0, 0($a0)
 	addi $a0, $a0, 1
@@ -812,10 +955,76 @@ endRun:
 	li $v0, 10   
 	syscall      
 return:
-	jr $ra
+	jr $ra]
 	
-imprimirBanner:
-	li $v0 , 4
- 	 la $a0, banner
- 	 
- 	 syscall 
+calculateReturnDate:
+# parametro
+# $a0 -> endereï¿½o da onde deve ser impresso (presica voltar 12 posiï¿½ï¿½es par apegar a data atual)
+	
+	#Dia
+    	lb   $t1, 0($a0)    # decimal
+    	lb   $t2, 1($a0)    # unidade
+
+    	# Converter caracteres para nï¿½meros inteiros
+    	subi $t1, $t1, 48   
+    	subi $t2, $t2, 48   
+
+    	
+    	li   $t3, 10        # Multiplicador
+    	mul  $t1, $t1, $t3  # Multiplica o decimal por 10
+	add  $t1, $t1, $t2  # Soma o segundo nï¿½mero
+
+    	#Mes
+	lb   $t2, 3($a0)    # decimal
+    	lb   $t4, 4($a0)    # unidade
+
+    	# Converter caracteres para nï¿½meros inteiros
+    	subi $t2, $t2, 48   
+    	subi $t4, $t4, 48   
+
+    	li   $t3, 10        # Multiplicador
+    	mul  $t2, $t2, $t3  # Multiplica o decimal por 10
+	add  $t2, $t2, $t4  # Soma o segundo nï¿½mero
+	
+	#Ano
+	lb   $t4, 6($a0)    # 1000
+    	lb   $t5, 7($a0)    # 100
+    	lb   $t6, 8($a0)    # 10
+    	lb   $t7, 9($a0)    # 1
+	    	
+	subi $t4, $t4, 48   
+    	subi $t5, $t5, 48   
+    	subi $t6, $t6, 48 
+    	subi $t7, $t7, 48 
+    	
+    	li   $t3, 1000        
+    	mul  $t4, $t4, $t3    # Multiplica por 1000
+    	li   $t3, 100   
+	add  $t5, $t5, $t3    # Soma o segundo nï¿½mero
+    	li   $t3, 10   
+    	#Soma
+	add  $t6, $t6, $t3    
+	add  $t4, $t4, $t5  
+	add  $t4, $t4, $t6  
+	add  $t4, $t4, $t7  
+
+    	# Adicionar 10 dias ao dia
+    	addi $t1, $t1, 10          # Incrementa 10 no dia
+
+    	# Verificar se o dia ultrapassou 31
+    	bgt $t1, 31, adjustMonth   # Se o dia ultrapassou 31, ajusta o mï¿½s
+
+    	j displayDate
+
+adjustMonth:
+    	sub $t1, $t1, 31           # Subtrai 31 dias para ajustar o mï¿½s
+    	addi $t2, $t2, 1           # Avanï¿½a para o prï¿½ximo mï¿½s
+
+    	# Se o mï¿½s for maior que 12, ajusta o ano
+    	bgt $t2, 12, adjustYear    # Se o mï¿½s for maior que 12 (dezembro), ajusta o ano
+
+    	j displayDate
+
+adjustYear:
+    	addi $t3, $t3, 1           # Incrementa o ano
+    	li $t2, 1                  # Reseta o mï¿½s para janeiro
