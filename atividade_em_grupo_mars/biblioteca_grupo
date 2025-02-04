@@ -6,8 +6,6 @@ booksFile:	.asciiz "books.txt"
 loanFile:	.asciiz "emprestimos.txt"	
 
 # MENSAGENS PADROES ----------------------------------------------------------------------------------------
-msgMain: .asciiz "Bem vindo/a a livraria da Rural\n\nInforme sua matricula:\n\n"
-msgMenu: .asciiz "1- Livros\n2- Usuarios"
 msgMatriculaNaoEncontrada: .asciiz "Numero de matricula não encontrada, escreva novamente\n"
 msgQual: .asciiz "\nQual "
 msgTitleBook: .asciiz "o titulo do livro\n"
@@ -19,6 +17,14 @@ msgRegistrationCode: .asciiz "o numero de matricula\n"
 msgCourseUser: .asciiz "o curso do Estudante\n"
 banner : .asciiz "TurmaDoCodigo-shell>>"
 
+#Formato de entrada "comando arg1 arg2 arg3 ..."
+
+msgEndRun: .asciiz "endRun"
+msgCreatUser: .asciiz "creatUser"
+msgCreatBook: .asciiz "creatBook"
+msgCreatBookLoan: .asciiz "creatBookLoan"
+msgCheckBookAvailability: .asciiz "checkBookAvailability" 
+
 msg:    .asciiz "Hora atual: "
 sep:    .asciiz ":"
 newl:   .asciiz "\n"  # Nova linha para formatar a saída da hora
@@ -27,6 +33,7 @@ msgTeste: .asciiz "12345"
 
 # BUFFERS --------------------------------------------------------------------------------------------------
 			  # Não pode ter espaço nos espaços do bloco (talvez depois melhorar a logica para suportar isso)
+bufferInput:  .space 100	  # Comando do usuario 
 bufferUser:  .space 68    # 30 - primeiro bloco, 1 - virgula,  5 - segundo bloco, 1 - virgula,  30 - segundo bloco, 1 - quebra de linha
 bufferLinha: .space 68    # 30 - primeiro bloco, 1 - virgula,  5 - segundo bloco, 1 - virgula,  30 - segundo bloco, 1 - quebra de linha
 bufferByte: .space 1
@@ -52,16 +59,69 @@ main:
 	li $s0, 0   		# numero de elementos do bufferUser (para adicinar elemento o numero ta certo, mas para carregar é preciso diminuir 1)
 	li $s1, 0		# sera usado para salvar referencia do descritor de arquivo (para poder iterar)
 	
-	#Mensagem de bem vindo e numero de matricua
-	#la $a0, msgMain
-	#jal showMsg
-	la $a2, msgTeste
-	jal checkBookAvailability
+	li $a3, 0
+	jal inputUser
+	la $a0, bufferInput
 	
+	la $a1, msgEndRun
+	jal checkUserFunc
+	beq $a0, $a3, endRun
+	
+	la $a1, msgCreatUser
+	jal checkUserFunc
+	beq $a0, $a3, creatUser
+	
+	la $a1, msgCreatBook
+	jal checkUserFunc
+	beq $a0, $a3, creatBook
+	
+	la $a1, msgCreatBookLoan
+	jal checkUserFunc
+	beq $a0, $a3, creatBookLoan
+	
+	la $a1, msgCheckBookAvailability
+	jal checkUserFunc
+	beq $a0, $a3, checkBookAvailability
 	
 	#jal solicitarhora #para pegar a hora atual
 	
 	j endRun
+	
+checkUserFunc:
+# parametros
+# $a0 -> end do buffer
+# $a1 -> string comparar com primeira palavra do buffer
+# retorna
+# $a0 -> 0 = iguais
+
+	lb $t0, 0($a0)
+	lb $t1, 0($a1)
+	beq $t0, $zero, termino
+	bne $t0, $t1, diferente
+	addi $a0, $a0, 1
+	addi $a1, $a1, 1
+	j checkUserFunc
+	
+termino:
+	beq $t1, $zero, iguais   #verifica se ambas as palavras terminaram
+	j diferente
+	
+iguais:
+	li $a0, 0
+	j return
+	
+diferente:
+	slt $t2, $t0, $t1
+	bne $t2, $zero, primeiroMenor
+	j segundoMenor
+	
+primeiroMenor:
+	li $a0, -1
+	j return
+	
+segundoMenor:
+	li $a0, 1
+	j return
 	
 checkBookAvailability:
 #Parametro
@@ -328,9 +388,9 @@ creatUser:
 	sw $ra, 0($sp)     	     # salvar referencia
 	
 	#Nome
-	la $a0, msgQual          # parametros da função -> mensagem(showMsg)
+	la $a0, msgQual          # parametros da funcao -> mensagem(showMsg)
 	jal showMsg
-	la $a0, msgNameUser          # parametros da função -> mensagem(showMsg)
+	la $a0, msgNameUser          # parametros da funcao -> mensagem(showMsg)
 	jal showMsg
 	
 	jal inputUser		   # Altera o indice
@@ -340,15 +400,15 @@ creatUser:
 	jal index30Block
 	move $s0, $a1			# atualiza o indice
 
-	la $a0, bufferUser  	     # parametros da função -> buffer(commaInBuffer) 
-	move $a1, $s0		     # parametros da função  -> indice do buffer (commaInBuffer)
+	la $a0, bufferUser  	     # parametros da funcao -> buffer(commaInBuffer) 
+	move $a1, $s0		     # parametros da funcao  -> indice do buffer (commaInBuffer)
 	jal commaInBuffer
 	addi $s0, $s0, 1
 	
 	#Matricula
-	la $a0, msgQual          # parametros da função -> mensagem(showMsg)
+	la $a0, msgQual          # parametros da funcao -> mensagem(showMsg)
 	jal showMsg
-	la $a0, msgRegistrationCode  # parametros da função -> mensagem(showMsg)
+	la $a0, msgRegistrationCode  # parametros da funaco -> mensagem(showMsg)
 	jal showMsg
 	
 	jal inputUser
@@ -357,8 +417,8 @@ creatUser:
 	jal index5Block
 	move $s0, $a1			# atualiza o indice
 	
-	la $a0, bufferUser  	     # parametros da função -> buffer(commaInBuffer)
-	move $a1, $s0		     # parametros da função  -> indice do buffer (commaInBuffer)
+	la $a0, bufferUser  	     # parametros da funaco -> buffer(commaInBuffer)
+	move $a1, $s0		     # parametros da funcao  -> indice do buffer (commaInBuffer)
 	jal commaInBuffer
 	addi $s0, $s0, 1
 	
@@ -668,7 +728,7 @@ inputUser:
 	lw $a0, 0($t0)             # carrega o caracter
 	li $t3, 0x0A 		   # Enter
 	beq $a0, $t3, return
-	la $t2, bufferUser 
+	la $t2, bufferInput 
 	add $t2, $t2, $s0
 	sb $a0, 0($t2)   	    # salva no buffer
 	addi $s0, $s0, 1	    # +1 indice bufferUser
@@ -719,13 +779,13 @@ loopDisplaymsg:
 	li $t1, 0xFFFF000C       # endereço do display data
 	sw $t0, 0($t1)           # escreve
 
-	addi $a0, $a0, 1  	 # próximo caractere
+	addi $a0, $a0, 1  	 # proximo caractere
 	j showMsg    
 
 saveData:
 # Parâmetros
 # $a0 -> Nome do arquivo
-# $a1 -> Endereço da string a ser salva (buffer)
+# $a1 -> Endereco da string a ser salva (buffer)
 # $a2 -> Tamanho da string a ser salva
 
 	move $t0, $a1
@@ -766,7 +826,7 @@ readFile:
 	li $a2, 68 		# tamanho do buffer
 	syscall
  
-	blez $v0, endOfFile	# Se não tiver mais nada para ler
+	blez $v0, endOfFile	# Se nao tiver mais nada para ler
 	
 	j return
 	
