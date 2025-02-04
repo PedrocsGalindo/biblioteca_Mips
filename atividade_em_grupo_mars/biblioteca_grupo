@@ -65,15 +65,16 @@ space:      .byte 0x20     # espaco em branco
 # $a0 : buffer(clearBuffer), buffer(commaInBuffer), arquivo(saveData), mensagem(showMsg), contador(cleardDisplay), caracterEscrito(inputUser)
 # $a1 : indice(clearBuffer), indice(commaInBuffer), buffer(saveData) 
 # $a2 : tamanhoString(saveData)
-main:	
+main:
+	
+	
 	li $s0, 0   		# numero de elementos do bufferUser (para adicinar elemento o numero ta certo, mas para carregar √© preciso diminuir 1)
 	li $s1, 0		# sera usado para salvar referencia do descritor de arquivo (para poder iterar)
 	
-	la $a0, banner		# Mostra o banner de entrada de dados
+	la $a0, banner
 	jal showMsg
-	jal inputUser		#Pega a entrada de dados do usuario que fica em bufferInput
+	jal inputUser
 	
-	# Compara o primeiro elemento do bufferInput para saber qual comando esta chamando
 	la $a0, bufferInput
 	la $a1, msgEndRun
 	jal checkUserFunc
@@ -108,6 +109,7 @@ main:
 	la $a1, msgRemoverRegistroLivro
 	jal checkUserFunc
 	beqz $a1, removerRegistroLivro
+	#jal solicitarhora #para pegar a hora atual
 	
 	j endRun
 	
@@ -229,8 +231,6 @@ LimpaArquivo:
 
         j main
     
-
-   
 isbmInputToIsbm:
 	la $t0, bufferInput
 	la $t1, bufferISBN
@@ -242,7 +242,6 @@ isbmInputToIsbm:
 	addi $a0, $a0, 1
 	addi $a1, $a1, 1
 	j isbmInputToIsbm
-
     
 removerRegistroLivro: 
 	#abrindo o arquivo de livros
@@ -251,7 +250,6 @@ removerRegistroLivro:
 	#s0 contÔøΩm o descitor de local_livros
 	la, $a0, local_temp
 	jal abrirArquivoEscrita
-	#s5 contÔøΩm o descritor de local_temp
 	
 	li $a0, 5		#posicao no bufferInput que contem o isbm
 	li $a1, 0
@@ -260,6 +258,13 @@ removerRegistroLivro:
 	add $t1, $t1, $a1	#endereco bufferISBN + indice
 	li $t0, ','
 	sb $t0, 0($t1)
+	
+	la $a0, msgQuebraLinha
+	li $v0,4
+	syscall
+	
+	#fechando os arquivos
+	
 	
 	#Esse loop transfere linha por linha do arquivo de Acervo, e transfere para o arquivo temporario, exceto a linha que eu quero apagar
 	loopTransferirRegistroLivroTemp:
@@ -949,8 +954,8 @@ creatBookLoan:
 	
 	#Mostrar Cadastro
 	la $a0, msgjumpLine		
-	jal showMsg		     # pula uma linha
-	la $a0, bufferUser
+	jal showMsg
+	la $a0, bufferUser		     # pula uma linha
 	jal showBuffer
 	
 	la $a0, booksFile	     # parametros da fun√ß√£o -> arquivo(saveData) 
@@ -1015,13 +1020,14 @@ barInBuffer:
 # FUNCOES DE BUFFER ------------------------------------------
 
 showBuffer:
-# Serve apenas para o linha e User
 # Par√¢metros
 # $a0 -> buffer
+# Serve apenas para o linha e User
 	addi $sp, $sp, -4   
 	sw $ra, 0($sp)     	     # salvar referencia
 	
 	move $t7, $a0
+	
 	jal showMsg
 	
 	move $a0, $t7
@@ -1029,11 +1035,11 @@ showBuffer:
 	jal showMsg
 	
 	move $a0, $t7
-	
 	lw $ra, 0($sp)       	     # recupera referencia do chamdaor
 	addi $sp, $sp, 4    
 	
-	j return    
+	j return
+
 
 # FUNCOES DE MMIO -----------------------------------------------
 inputUser:
@@ -1125,6 +1131,83 @@ saveData:
 	syscall
 	
 	j closeFile
+
+searchBookByISBNquantidade:
+    # Par‚metro
+    # $a2 -> string procurada (ISBN)
+
+    addi $sp, $sp, -4   
+    sw $ra, 0($sp)          # salvar referÍncia
+    
+    move $t0, $a2           # salvar referÍncia 
+    la $a0, booksFile       # caminho do arquivo
+    jal openFile            # Abre o arquivo, deixando disponÌvel para leitura, salvando o descritor em $s1
+    
+    move $a2, $t0           # recupera a referÍncia
+    
+    lw $ra, 0($sp)          # recupera referÍncia
+    addi $sp, $sp, 4   
+    
+    # Buscar ISBN no arquivo
+    li $a1, 2               # segundo bloco (ajuste conforme necess·rio)
+    jal searchStringOnFile  # busca o ISBN no arquivo
+    
+    # Se a string n„o for encontrada
+    beqz $a1, notFound
+
+checkAvailability:
+    # Extrair a quantidade disponÌvel apÛs o hÌfen no bufferLinha
+    la $a3, bufferLinha      # InÌcio do buffer onde a linha foi lida
+    li $t0, 0                # Õndice para procurar o hÌfen
+    
+findHyphen:
+    lb $t2, 0($a3)           # Carrega o prÛximo caractere
+    beqz $t2, endOfFile      # Se for o final da linha, termina
+    beq $t2, 0x2D, foundHyphen  # Se encontrar o hÌfen, vai para foundHyphen
+    addi $a3, $a3, 1         # Move para o prÛximo caractere
+    j findHyphen
+
+foundHyphen:
+    # Agora estamos na posiÁ„o do hÌfen, movemos para o n˙mero (quantidade)
+    addi $a3, $a3, 2         # Move para a posiÁ„o apÛs o hÌfen (onde comeÁa o n˙mero)
+    
+    li $t3, 0                # Limpar o registrador para armazenar a quantidade
+    li $t4, 10               # Fator multiplicador (para formar o n˙mero)
+
+parseQuantity:
+    lb $t2, 0($a3)           # Carrega o prÛximo caractere
+    beqz $t2, checkStock     # Se for final de linha, parar
+    sub $t2, $t2, 0x30        # Converte o caractere ASCII para n˙mero
+    mul $t3, $t3, $t4         # Multiplica pelo fator
+    add $t3, $t3, $t2         # Adiciona o valor atual
+    addi $a3, $a3, 1          # Move para o prÛximo caractere
+    j parseQuantity
+
+checkStock:
+    # Verifica se a quantidade do livro È maior que zero
+    bgtz $t3, bookAvailable  # Se a quantidade ($t3) for maior que zero, vai para bookAvailable
+    j notAvailable           # Se n„o estiver disponÌvel, vai para notAvailable
+
+bookAvailable:
+    # Imprimir mensagem "Livro disponÌvel"
+    li $v0, 4                # Syscall para imprimir string
+    la $a0, availableMessage  # Mensagem: Livro disponÌvel
+    syscall                  # Chama a syscall para imprimir a mensagem
+    j return                 # Retorna apÛs imprimir
+
+notFound:
+    # Imprimir mensagem "Livro n„o encontrado"
+    li $v0, 4                # Syscall para imprimir string
+    la $a0, notFoundMessage  # Mensagem: Livro n„o encontrado
+    syscall
+    j return                 # Retorna apÛs imprimir
+
+notAvailable:
+    # Imprimir mensagem "Livro n„o disponÌvel"
+    li $v0, 4                # Syscall para imprimir string
+    la $a0, notAvailableMessage  # Mensagem: Livro n„o disponÌvel
+    syscall
+    j return                 # Retorna apÛs imprimir
 
 openFile:
 # Parametros
@@ -1330,79 +1413,3 @@ putDateLoanOnBufferUser:
 
 	j return
 	
-searchBookByISBNquantidade:
-    # Par√¢metro
-    # $a2 -> string procurada (ISBN)
-
-    addi $sp, $sp, -4   
-    sw $ra, 0($sp)          # salvar refer√™ncia
-    
-    move $t0, $a2           # salvar refer√™ncia 
-    la $a0, booksFile       # caminho do arquivo
-    jal openFile            # Abre o arquivo, deixando dispon√≠vel para leitura, salvando o descritor em $s1
-    
-    move $a2, $t0           # recupera a refer√™ncia
-    
-    lw $ra, 0($sp)          # recupera refer√™ncia
-    addi $sp, $sp, 4   
-    
-    # Buscar ISBN no arquivo
-    li $a1, 2               # segundo bloco (ajuste conforme necess√°rio)
-    jal searchStringOnFile  # busca o ISBN no arquivo
-    
-    # Se a string n√£o for encontrada
-    beqz $a1, notFound
-
-checkAvailability:
-    # Extrair a quantidade dispon√≠vel ap√≥s o h√≠fen no bufferLinha
-    la $a3, bufferLinha      # In√≠cio do buffer onde a linha foi lida
-    li $t0, 0                # √çndice para procurar o h√≠fen
-    
-findHyphen:
-    lb $t2, 0($a3)           # Carrega o pr√≥ximo caractere
-    beqz $t2, endOfFile      # Se for o final da linha, termina
-    beq $t2, 0x2D, foundHyphen  # Se encontrar o h√≠fen, vai para foundHyphen
-    addi $a3, $a3, 1         # Move para o pr√≥ximo caractere
-    j findHyphen
-
-foundHyphen:
-    # Agora estamos na posi√ß√£o do h√≠fen, movemos para o n√∫mero (quantidade)
-    addi $a3, $a3, 2         # Move para a posi√ß√£o ap√≥s o h√≠fen (onde come√ßa o n√∫mero)
-    
-    li $t3, 0                # Limpar o registrador para armazenar a quantidade
-    li $t4, 10               # Fator multiplicador (para formar o n√∫mero)
-
-parseQuantity:
-    lb $t2, 0($a3)           # Carrega o pr√≥ximo caractere
-    beqz $t2, checkStock     # Se for final de linha, parar
-    sub $t2, $t2, 0x30        # Converte o caractere ASCII para n√∫mero
-    mul $t3, $t3, $t4         # Multiplica pelo fator
-    add $t3, $t3, $t2         # Adiciona o valor atual
-    addi $a3, $a3, 1          # Move para o pr√≥ximo caractere
-    j parseQuantity
-
-checkStock:
-    # Verifica se a quantidade do livro √© maior que zero
-    bgtz $t3, bookAvailable  # Se a quantidade ($t3) for maior que zero, vai para bookAvailable
-    j notAvailable           # Se n√£o estiver dispon√≠vel, vai para notAvailable
-
-bookAvailable:
-    # Imprimir mensagem "Livro dispon√≠vel"
-    li $v0, 4                # Syscall para imprimir string
-    la $a0, availableMessage  # Mensagem: Livro dispon√≠vel
-    syscall                  # Chama a syscall para imprimir a mensagem
-    j return                 # Retorna ap√≥s imprimir
-
-notFound:
-    # Imprimir mensagem "Livro n√£o encontrado"
-    li $v0, 4                # Syscall para imprimir string
-    la $a0, notFoundMessage  # Mensagem: Livro n√£o encontrado
-    syscall
-    j return                 # Retorna ap√≥s imprimir
-
-notAvailable:
-    # Imprimir mensagem "Livro n√£o dispon√≠vel"
-    li $v0, 4                # Syscall para imprimir string
-    la $a0, notAvailableMessage  # Mensagem: Livro n√£o dispon√≠vel
-    syscall
-    j return                 # Retorna ap√≥s imprimir
