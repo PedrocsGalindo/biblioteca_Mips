@@ -19,6 +19,7 @@ msgCreatBook: .asciiz "crb"
 msgCreatBookLoan: .asciiz "crbl"
 msgCheckBookAvailability: .asciiz "ckba" 
 
+msgjumpLine: .asciiz "\n"
 msg:    .asciiz "Hora atual: "
 sep:    .asciiz ":"
 newl:   .asciiz "\n"  # Nova linha para formatar a saída da hora
@@ -77,7 +78,7 @@ main:
 	la $a0, bufferInput
 	la $a1, msgCreatBookLoan
 	jal checkUserFunc
-	#beqz $a1, creatBookLoan
+	beqz $a1, creatBookLoan
 	
 	la $a0, bufferInput
 	la $a1, msgCheckBookAvailability
@@ -144,9 +145,26 @@ loopCheckBookAvailability:
 #$a0 -> endereco do 3 bloco do bufferLinha	
 	lb $t0, 0($a0)
 	li $t1, '-'
-	beq $t0, $t1, showMsg
+	beq $t0, $t1, endLoopCheckBookAvailability
 	addi $a0, $a0, 1
 	j loopCheckBookAvailability
+	
+endLoopCheckBookAvailability:
+	addi $sp, $sp, -4   
+	sw $ra, 0($sp)     	     # salvar referencia
+	
+	move $t4, $a0		     # salva o endere�o da string que contem o numeor de livros
+	la $a0, msgjumpLine		
+	jal showMsg		     # pula uma linha
+	la $a0, banner
+	jal showMsg		     # exibe o banner
+	move $a0, $t4
+	jal showMsg		     # exibe o numeor de livros
+	
+	lw $ra, 0($sp)     	     # recupera referencia
+	addi $sp, $sp, 4   
+	
+	j return
 	
 seachBookByISBM:
 #Parametro
@@ -554,7 +572,7 @@ creatBookLoan:
 	sw $ra, 0($sp)     	     # salvar referencia
 	
 	li $a0, 0 		     # indiceUser
-	li $a1, 4		     # indiceInput
+	li $a1, 5		     # indiceInput
 	
 	#Matricula
 	jal bufferInputToUser
@@ -597,7 +615,8 @@ creatBookLoan:
 	move $a1, $t2		     # indice do Input
 	
 	#Quantidade de livros
-	move $a0, $t3		     # indiceUser
+	la $a0, bufferUser
+	add $a0, $a0, $t3	# indiceUser
 	jal calculateReturnDate
 	
 	#Quebra de linha
@@ -612,7 +631,7 @@ creatBookLoan:
 	li $a1, 68
 	jal showBuffer
 	
-	la $a0, booksFile	     # parametros da função -> arquivo(saveData) 
+	la $a0, loanFile	     # parametros da função -> arquivo(saveData) 
 	la $a1, bufferUser	     # parametros da função -> buffer(saveData) 
 	li $a2, 68	 	     # parametros da função -> tamanhoString(saveData) 
 	jal saveData
