@@ -65,7 +65,9 @@ main:
 
 	li $s0, 0   		# numero de elementos do bufferUser (para adicinar elemento o numero ta certo, mas para carregar Ã© preciso diminuir 1)
 	li $s1, 0		# sera usado para salvar referencia do descritor de arquivo (para poder iterar)
-
+	
+	la $a0, banner
+	jal showMsg
 	jal inputUser
 	
 	la $a0, bufferInput
@@ -633,6 +635,7 @@ creatBookLoan:
 	addi $sp, $sp, 4    
 	
 	j return
+	
 calculateReturnDate:
 # parametro
 # $a0 -> endereço da onde deve ser impresso (presica voltar 12 posições par apegar a data atual)
@@ -714,6 +717,9 @@ loopshowBuffer:
 	j loopshowBuffer       # Continua a exibiÃ§Ã£o
 
 # FUNCOES DE MMIO -----------------------------------------------
+
+
+	
 
 inputUser:
 	li $t0, 0xFFFF0000         # endereÃ§o do keyboard status
