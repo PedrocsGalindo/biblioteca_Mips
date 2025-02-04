@@ -28,6 +28,13 @@ msgCheckBookAvailability: .asciiz "ckba"
 msg:    .asciiz "Hora atual: "
 sep:    .asciiz ":"
 newl:   .asciiz "\n"  # Nova linha para formatar a saída da hora
+prompt: .asciiz "Digite a data (dia/mes/ano): "
+input:  .space 11  # Espaço para armazenar a data (10 caracteres + 1 para o terminador nulo)
+
+
+
+
+
 
 msgTeste: .asciiz "12345"
 
@@ -303,7 +310,7 @@ diferents:
 	j searchStringOnFile
 #FUNCOES PARA DATA---------------------------------------------------------------------------------------------------------------------------------------------------
 
-solicitarhora:
+solicitarhora: #ele entrega a hora e solicita a data 
         # Obtém o tempo atual em milissegundos (syscall 30)
         li $v0, 30      # syscall 30: obtém o tempo do sistema (em milissegundos desde a época)
         syscall
@@ -368,18 +375,32 @@ solicitarhora:
         syscall
 
         # Imprime ":" (separador)
-        li $v0, 4       # Codigo da syscall para imprimir uma string
+        li $v0, 4       # Código da syscall para imprimir uma string
         la $a0, sep     # Endereço do separador ":"
         syscall
 
         # Imprime os segundos restantes
         move $a0, $t8   # Move o valor dos segundos restantes para $a0
-        li $v0, 1       # Codigo da syscall para imprimir um número inteiro
+        li $v0, 1       # Código da syscall para imprimir um número inteiro
         syscall
 
-        li $v0, 4       # Codigo da syscall para imprimir uma string
+        # Imprime uma nova linha
+        li $v0, 4       # Código da syscall para imprimir uma string
         la $a0, newl    # Endereço da string de nova linha
         syscall
+
+        # Solicitar a data ao usuário
+        li $v0, 4         # Código da syscall para imprimir uma string
+        la $a0, prompt    # Endereço da string do prompt
+        syscall
+
+        # Ler a entrada do usuário (data)
+        li $v0, 8         # Código da syscall para ler uma string
+        la $a0, input     # Endereço onde a string será armazenada
+        li $a1, 11        # Limite de caracteres (10 para a data e 1 para o terminador nulo)
+        syscall
+
+        # Aqui você pode processar ou validar a data conforme necessário
 
         jr $ra  # Retorna da função
 
