@@ -18,6 +18,7 @@ msgCreatUser: .asciiz "cru"
 msgCreatBook: .asciiz "crb"
 msgCreatBookLoan: .asciiz "crbl"
 msgCheckBookAvailability: .asciiz "ckba" 
+msgListarLivros: .asciiz "llr"
 
 msgjumpLine: .asciiz "\n"
 msg:    .asciiz "Hora atual: "
@@ -84,6 +85,11 @@ main:
 	la $a1, msgCheckBookAvailability
 	jal checkUserFunc
 	beqz $a1, checkBookAvailability
+	
+	la $a0, bufferInput
+	la $a1, msgListarLivros
+	jal checkUserFunc
+	beqz $a1, listarLivros
 	
 	#jal solicitarhora #para pegar a hora atual
 	
@@ -156,8 +162,6 @@ endLoopCheckBookAvailability:
 	move $t4, $a0		     # salva o endere�o da string que contem o numeor de livros
 	la $a0, msgjumpLine		
 	jal showMsg		     # pula uma linha
-	la $a0, banner
-	jal showMsg		     # exibe o banner
 	move $a0, $t4
 	jal showMsg		     # exibe o numeor de livros
 	
@@ -710,15 +714,34 @@ showBuffer:
 	j return
 	
 loopshowBuffer:
+	addi $sp, $sp, -4   
+	sw $ra, 0($sp)     	     # salvar referencia
+	
 	subi $a1, $a1, 1    # Decrementa o contador
-	move $t1, $a0       # buffer
-	lb $a0, 0($t1)      # caractere do buffer
-	li $v0, 11          # imprimir caractere
-	syscall
-	move $a0, $t1
+	move $t2, $a0       # buffer
+	lb $a0, 0($t2)      # caractere do buffer
+	
+	jal loopDisplayBuffer
+	
+	move $a0, $t2
 	addi $a0, $a0, 1    # Avança para o próximo caractere
+	
+	lw $ra, 0($sp)       	     # recupera referencia do chamdaor
+	addi $sp, $sp, 4   
+	
 	beqz $a1, return    # Se o índice for 0, chegou no ultimo
 	j loopshowBuffer       # Continua a exibição
+
+loopDisplayBuffer:
+#parametro $a0 -> byte pra exibir
+	li $t0, 0xFFFF0008       # endereço do display status
+	lw $t1, 0($t0)           # status do Display, bit menos significativo = 0 -> display indisponivel
+	andi $t1, $t1, 1         
+	beq $t1, $zero, loopDisplayBuffer
+
+	li $t0, 0xFFFF000C       # endereço do display data
+	sw $a0, 0($t0)           # escrita	
+	j loopshowBuffer     
 
 # FUNCOES DE MMIO -----------------------------------------------
 inputUser:
@@ -785,6 +808,7 @@ loopDisplaymsg:
 
 	addi $a0, $a0, 1  	 # proximo caractere
 	j showMsg    
+
 
 saveData:
 # Parâmetros
