@@ -20,10 +20,10 @@ banner : .asciiz "TurmaDoCodigo-shell>>"
 #Formato de entrada "comando arg1 arg2 arg3 ..."
 
 msgEndRun: .asciiz "endRun"
-msgCreatUser: .asciiz "creatUser"
-msgCreatBook: .asciiz "creatBook"
-msgCreatBookLoan: .asciiz "creatBookLoan"
-msgCheckBookAvailability: .asciiz "checkBookAvailability" 
+msgCreatUser: .asciiz "cru"
+msgCreatBook: .asciiz "crb"
+msgCreatBookLoan: .asciiz "crbl"
+msgCheckBookAvailability: .asciiz "ckba" 
 
 msg:    .asciiz "Hora atual: "
 sep:    .asciiz ":"
@@ -32,8 +32,8 @@ newl:   .asciiz "\n"  # Nova linha para formatar a saída da hora
 msgTeste: .asciiz "12345"
 
 # BUFFERS --------------------------------------------------------------------------------------------------
-			  # Não pode ter espaço nos espaços do bloco (talvez depois melhorar a logica para suportar isso)
-bufferInput:  .space 100	  # Comando do usuario 
+			  # Nao pode ter espao nos espaços do bloco (talvez depois melhorar a logica para suportar isso)
+bufferInput:  .space 100  # Comando do usuario 
 bufferUser:  .space 68    # 30 - primeiro bloco, 1 - virgula,  5 - segundo bloco, 1 - virgula,  30 - segundo bloco, 1 - quebra de linha
 bufferLinha: .space 68    # 30 - primeiro bloco, 1 - virgula,  5 - segundo bloco, 1 - virgula,  30 - segundo bloco, 1 - quebra de linha
 bufferByte: .space 1
@@ -46,7 +46,7 @@ space:      .byte 0x20     # espaço em branco
 .globl main
 
 # REGISTRADORES FIXOS ----------------------------------------------------------------------------------------
-# Sempre que for usar os registradores fixos é necessario varificar se vai alterar algum outro valor, ou caso va usar alguma função que tenha esses registradores (necessario manter uma copia temporaria)
+# Sempre que for usar os registradores fixos  necessario varificar se vai alterar algum outro valor, ou caso va usar alguma função que tenha esses registradores (necessario manter uma copia temporaria)
 # Caso necessario antes do input tem que salvar o valor de $a0 
 
 # $s0 : indice do bufferUser, indice do bufferUser(inputUser), 
@@ -58,30 +58,33 @@ main:
 
 	li $s0, 0   		# numero de elementos do bufferUser (para adicinar elemento o numero ta certo, mas para carregar é preciso diminuir 1)
 	li $s1, 0		# sera usado para salvar referencia do descritor de arquivo (para poder iterar)
-	
-	li $a3, 0
+
 	jal inputUser
-	la $a0, bufferInput
 	
+	la $a0, bufferInput
 	la $a1, msgEndRun
 	jal checkUserFunc
-	beq $a0, $a3, endRun
+	beqz $a1, endRun
 	
+	la $a0, bufferInput
 	la $a1, msgCreatUser
 	jal checkUserFunc
-	beq $a0, $a3, creatUser
+	beqz $a1 creatUser
 	
+	la $a0, bufferInput
 	la $a1, msgCreatBook
 	jal checkUserFunc
-	beq $a0, $a3, creatBook
+	beqz $a1, creatBook
 	
+	la $a0, bufferInput
 	la $a1, msgCreatBookLoan
 	jal checkUserFunc
-	beq $a0, $a3, creatBookLoan
+	beqz $a1, creatBookLoan
 	
+	la $a0, bufferInput
 	la $a1, msgCheckBookAvailability
 	jal checkUserFunc
-	beq $a0, $a3, checkBookAvailability
+	beqz $a1, checkBookAvailability
 	
 	#jal solicitarhora #para pegar a hora atual
 	
@@ -89,50 +92,47 @@ main:
 	
 checkUserFunc:
 # parametros
-# $a0 -> end do buffer
+# $a0 -> endereco do buffer
 # $a1 -> string comparar com primeira palavra do buffer
 # retorna
-# $a0 -> 0 = iguais
+# $a1 -> 0 = iguais
 
 	lb $t0, 0($a0)
 	lb $t1, 0($a1)
-	beq $t0, $zero, termino
+	beq $t1, $zero, termino		# verifica se a palavra procurada chegou ao fim
 	bne $t0, $t1, diferente
 	addi $a0, $a0, 1
 	addi $a1, $a1, 1
 	j checkUserFunc
 	
 termino:
-	beq $t1, $zero, iguais   #verifica se ambas as palavras terminaram
+	li $t2, 0x20	     # virgula
+	beq $t0, $t2, equals      # verifica se a palavra procurada no bufferLinha chegou ao fim
+	beqz $t0, equals     # secundo bloco temrina em virgula, não tem espaço vazio
 	j diferente
 	
-iguais:
-	li $a0, 0
+equals:
+	li $a1, 0
 	j return
 	
 diferente:
-	slt $t2, $t0, $t1
-	bne $t2, $zero, primeiroMenor
-	j segundoMenor
-	
-primeiroMenor:
-	li $a0, -1
+	li $a1, 1
 	j return
-	
-segundoMenor:
-	li $a0, 1
-	j return
-	
+
 checkBookAvailability:
-#Parametro
-#$a2 -> string procurada
+# A string procurada sera o primeiro argumento do bufferInput
+
 	addi $sp, $sp, -4   
 	sw $ra, 0($sp)     	     # salvar referencia
 	
+	la $a2, bufferInput
+	addi $a2, $a2, 5
 	jal seachBookByISBM	     # o "objeto", caso exista, estara por enteiro no buffer linha
 
 	la $a1, bufferLinha
-	add $a0, $a1, 36		# endereço do 3 bloco do bufferLinha
+	add $a0, $a1, 36		# endereco do 3 bloco do bufferLinha
+	la $a2, bufferInput
+	addi $a2, $a2, 5
 	jal loopCheckBookAvailability
 	
 	addi $sp, $sp, 4
@@ -142,6 +142,7 @@ checkBookAvailability:
 
 loopCheckBookAvailability:
 #Parametro
+#$a2 -> string procurada
 #$a0 -> endereco do 3 bloco do bufferLinha	
 	lb $t0, 0($a0)
 	li $t1, '-'
@@ -256,7 +257,7 @@ endSearchEndFile:
 searchBlock:
 #Parametros
 # $a0 -> indice dos buffers
-# $a3 -> endereço do bloco no bufferLinha
+# $a3 -> endereco do bloco no bufferLinha
 # $a2 -> string procurada
 
 	add $t0, $a2, $a0	# posicoes dos caracteres (string procurada)
@@ -274,7 +275,7 @@ searchBlock:
 	
 	move $a3, $t2 		# recupera referencia
 	
-	addi $a0, $a0, 1		# incrementa o indice
+	addi $a0, $a0, 1	# incrementa o indice
 	
 	j searchBlock
 
@@ -367,16 +368,16 @@ solicitarhora:
         syscall
 
         # Imprime ":" (separador)
-        li $v0, 4       # Código da syscall para imprimir uma string
+        li $v0, 4       # Codigo da syscall para imprimir uma string
         la $a0, sep     # Endereço do separador ":"
         syscall
 
         # Imprime os segundos restantes
         move $a0, $t8   # Move o valor dos segundos restantes para $a0
-        li $v0, 1       # Código da syscall para imprimir um número inteiro
+        li $v0, 1       # Codigo da syscall para imprimir um número inteiro
         syscall
 
-        li $v0, 4       # Código da syscall para imprimir uma string
+        li $v0, 4       # Codigo da syscall para imprimir uma string
         la $a0, newl    # Endereço da string de nova linha
         syscall
 
