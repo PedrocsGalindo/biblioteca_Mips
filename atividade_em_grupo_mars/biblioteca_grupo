@@ -55,11 +55,11 @@ main:
 	#Mensagem de bem vindo e numero de matricua
 	#la $a0, msgMain
 	#jal showMsg
-	jal solicitarhora #para pegar a hora atual
+	la $a2, msgTeste
+	jal checkBookAvailability
 	
-	li $v0, 1
-	move $a0, $a1
-	syscall 
+	
+	#jal solicitarhora #para pegar a hora atual
 	
 	j endRun
 	
@@ -70,19 +70,21 @@ checkBookAvailability:
 	sw $ra, 0($sp)     	     # salvar referencia
 	
 	jal seachBookByISBM	     # o "objeto", caso exista, estara por enteiro no buffer linha
-	
+
 	la $a1, bufferLinha
-	add $a0, $a0, 36		# endereço do 3 bloco do bufferLinha
+	add $a0, $a1, 36		# endereço do 3 bloco do bufferLinha
 	jal loopCheckBookAvailability
 	
-	lw $ra, 0($sp)     	     # recupera referencia
 	addi $sp, $sp, 4
+	lw $ra, 0($sp)     	   
+	
+	j return
 
 loopCheckBookAvailability:
 #Parametro
-#$a0 -> endereço do 3 bloco do bufferLinha	
+#$a0 -> endereco do 3 bloco do bufferLinha	
 	lb $t0, 0($a0)
-	lb $t1, '-'
+	li $t1, '-'
 	beq $t0, $t1, showMsg
 	addi $a0, $a0, 1
 	j loopCheckBookAvailability
@@ -226,9 +228,9 @@ findString:
 	addi $sp, $sp, -4
 	lw $ra, 0($sp)     	     # recupera referencia
 	 
-	la $a0, bufferLinha
-	li $a1, 68
-	jal showBuffer
+	#la $a0, bufferLinha
+	#li $a1, 68
+	#jal showBuffer
 	
 	addi $sp, $sp, 4
 	lw $ra, 0($sp) 
