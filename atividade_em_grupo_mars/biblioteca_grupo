@@ -21,11 +21,13 @@ msgQuebraLinha: .asciiz "\n"
 
 #Formato de entrada "comando arg1 arg2 arg3 ..."
 
-msgEndRun: .asciiz "endRun"
-msgCreatUser: .asciiz "cru"
-msgCreatBook: .asciiz "crb"
-msgCreatBookLoan: .asciiz "crbl"
-msgCheckBookAvailability: .asciiz "ckba" 
+msgEndRun: .asciiz "endRun" 
+msgCreatUser: .asciiz "cru"			# cru nome matricula curso
+msgCreatBook: .asciiz "crb"			# crb titulo ISBM(5 digitos) autor quantidade
+msgCreatBookLoan: .asciiz "crbl"		# crbl matricula ISBM(5 digitos) dataAtual
+msgCheckBookAvailability: .asciiz "ckba" 	# ckba ISBM(5 digitos) 
+msgListarLivros: .asciiz "llr"
+msgRemoverRegistroLivro: .asciiz "rmvb"		# ckba ISBM(5 digitos) 
 
 msg:    .asciiz "Hora atual: "
 sep:    .asciiz ":"
@@ -63,16 +65,15 @@ space:      .byte 0x20     # espaco em branco
 # $a0 : buffer(clearBuffer), buffer(commaInBuffer), arquivo(saveData), mensagem(showMsg), contador(cleardDisplay), caracterEscrito(inputUser)
 # $a1 : indice(clearBuffer), indice(commaInBuffer), buffer(saveData) 
 # $a2 : tamanhoString(saveData)
-main:
-	
-	
+main:	
 	li $s0, 0   		# numero de elementos do bufferUser (para adicinar elemento o numero ta certo, mas para carregar é preciso diminuir 1)
 	li $s1, 0		# sera usado para salvar referencia do descritor de arquivo (para poder iterar)
 	
-	la $a0, banner
+	la $a0, banner		# Mostra o banner de entrada de dados
 	jal showMsg
-	jal inputUser
+	jal inputUser		#Pega a entrada de dados do usuario que fica em bufferInput
 	
+	# Compara o primeiro elemento do bufferInput para saber qual comando esta chamando
 	la $a0, bufferInput
 	la $a1, msgEndRun
 	jal checkUserFunc
@@ -98,7 +99,15 @@ main:
 	jal checkUserFunc
 	beqz $a1, checkBookAvailability
 	
-	#jal solicitarhora #para pegar a hora atual
+	la $a0, bufferInput
+	la $a1, msgListarLivros
+	jal checkUserFunc
+	beqz $a1, listarLivros
+	
+	la $a0, bufferInput
+	la $a1, msgRemoverRegistroLivro
+	jal checkUserFunc
+	beqz $a1, removerRegistroLivro
 	
 	j endRun
 	
@@ -220,6 +229,20 @@ LimpaArquivo:
 
         j main
     
+
+   
+isbmInputToIsbm:
+	la $t0, bufferInput
+	la $t1, bufferISBN
+	add $t0, $t0, $a0	#endereco bufferInput + indice
+	add $t1, $t1, $a1	#endereco bufferISBN + indice
+	lb $t0, 0($t0)
+	blez $t0, return	#verifica se chegou ao fim
+	sb $t0, 0($t1)
+	addi $a0, $a0, 1
+	addi $a1, $a1, 1
+	j isbmInputToIsbm
+
     
 removerRegistroLivro: 
 	#abrindo o arquivo de livros
@@ -229,17 +252,14 @@ removerRegistroLivro:
 	la, $a0, local_temp
 	jal abrirArquivoEscrita
 	#s5 cont�m o descritor de local_temp
-	#imprimindo mensagem do ISBN
-	#li $v0, 4
-	#la $a0, msgISBN
-	#syscall 
 	
-	la $a0, msgQuebraLinha
-	li $v0,4
-	syscall
-	
-	#fechando os arquivos
-	
+	li $a0, 5		#posicao no bufferInput que contem o isbm
+	li $a1, 0
+	jal isbmInputToIsbm
+	la $t1, bufferISBN
+	add $t1, $t1, $a1	#endereco bufferISBN + indice
+	li $t0, ','
+	sb $t0, 0($t1)
 	
 	#Esse loop transfere linha por linha do arquivo de Acervo, e transfere para o arquivo temporario, exceto a linha que eu quero apagar
 	loopTransferirRegistroLivroTemp:
@@ -776,8 +796,9 @@ creatUser:
 	addi $s0, $s0,1
 	
 	#Mostrar Cadastro
+	la $a0, msgjumpLine		
+	jal showMsg		     # pula uma linha
 	la $a0, bufferUser
-	li $a1, 68
 	jal showBuffer
 	
 	la $a0, usersFile	     # parametros da função -> arquivo(saveData) 
@@ -851,8 +872,9 @@ creatBook:
 	addi $s0, $s0,1
 	
 	#Mostrar Cadastro
+	la $a0, msgjumpLine		
+	jal showMsg		     # pula uma linha
 	la $a0, bufferUser
-	li $a1, 68
 	jal showBuffer
 	
 	la $a0, booksFile	     # parametros da função -> arquivo(saveData) 
@@ -926,8 +948,9 @@ creatBookLoan:
 	addi $s0, $s0,1
 	
 	#Mostrar Cadastro
+	la $a0, msgjumpLine		
+	jal showMsg		     # pula uma linha
 	la $a0, bufferUser
-	li $a1, 68
 	jal showBuffer
 	
 	la $a0, booksFile	     # parametros da função -> arquivo(saveData) 
@@ -992,32 +1015,25 @@ barInBuffer:
 # FUNCOES DE BUFFER ------------------------------------------
 
 showBuffer:
+# Serve apenas para o linha e User
 # Parâmetros
 # $a0 -> buffer
-# $a1 -> indice (numero de elementos no buffer)
 	addi $sp, $sp, -4   
 	sw $ra, 0($sp)     	     # salvar referencia
 	
 	move $t7, $a0
-	
-	jal loopshowBuffer
+	jal showMsg
 	
 	move $a0, $t7
+	addi $a0, $a0, 30
+	jal showMsg
+	
+	move $a0, $t7
+	
 	lw $ra, 0($sp)       	     # recupera referencia do chamdaor
 	addi $sp, $sp, 4    
 	
-	j return
-	
-loopshowBuffer:
-	subi $a1, $a1, 1    # Decrementa o contador
-	move $t1, $a0       # buffer
-	lb $a0, 0($t1)      # caractere do buffer
-	li $v0, 11          # imprimir caractere
-	syscall
-	move $a0, $t1
-	addi $a0, $a0, 1    # Avança para o próximo caractere
-	beqz $a1, return    # Se o índice for 0, chegou no ultimo
-	j loopshowBuffer       # Continua a exibição
+	j return    
 
 # FUNCOES DE MMIO -----------------------------------------------
 inputUser:
@@ -1314,3 +1330,79 @@ putDateLoanOnBufferUser:
 
 	j return
 	
+searchBookByISBNquantidade:
+    # Parâmetro
+    # $a2 -> string procurada (ISBN)
+
+    addi $sp, $sp, -4   
+    sw $ra, 0($sp)          # salvar referência
+    
+    move $t0, $a2           # salvar referência 
+    la $a0, booksFile       # caminho do arquivo
+    jal openFile            # Abre o arquivo, deixando disponível para leitura, salvando o descritor em $s1
+    
+    move $a2, $t0           # recupera a referência
+    
+    lw $ra, 0($sp)          # recupera referência
+    addi $sp, $sp, 4   
+    
+    # Buscar ISBN no arquivo
+    li $a1, 2               # segundo bloco (ajuste conforme necessário)
+    jal searchStringOnFile  # busca o ISBN no arquivo
+    
+    # Se a string não for encontrada
+    beqz $a1, notFound
+
+checkAvailability:
+    # Extrair a quantidade disponível após o hífen no bufferLinha
+    la $a3, bufferLinha      # Início do buffer onde a linha foi lida
+    li $t0, 0                # Índice para procurar o hífen
+    
+findHyphen:
+    lb $t2, 0($a3)           # Carrega o próximo caractere
+    beqz $t2, endOfFile      # Se for o final da linha, termina
+    beq $t2, 0x2D, foundHyphen  # Se encontrar o hífen, vai para foundHyphen
+    addi $a3, $a3, 1         # Move para o próximo caractere
+    j findHyphen
+
+foundHyphen:
+    # Agora estamos na posição do hífen, movemos para o número (quantidade)
+    addi $a3, $a3, 2         # Move para a posição após o hífen (onde começa o número)
+    
+    li $t3, 0                # Limpar o registrador para armazenar a quantidade
+    li $t4, 10               # Fator multiplicador (para formar o número)
+
+parseQuantity:
+    lb $t2, 0($a3)           # Carrega o próximo caractere
+    beqz $t2, checkStock     # Se for final de linha, parar
+    sub $t2, $t2, 0x30        # Converte o caractere ASCII para número
+    mul $t3, $t3, $t4         # Multiplica pelo fator
+    add $t3, $t3, $t2         # Adiciona o valor atual
+    addi $a3, $a3, 1          # Move para o próximo caractere
+    j parseQuantity
+
+checkStock:
+    # Verifica se a quantidade do livro é maior que zero
+    bgtz $t3, bookAvailable  # Se a quantidade ($t3) for maior que zero, vai para bookAvailable
+    j notAvailable           # Se não estiver disponível, vai para notAvailable
+
+bookAvailable:
+    # Imprimir mensagem "Livro disponível"
+    li $v0, 4                # Syscall para imprimir string
+    la $a0, availableMessage  # Mensagem: Livro disponível
+    syscall                  # Chama a syscall para imprimir a mensagem
+    j return                 # Retorna após imprimir
+
+notFound:
+    # Imprimir mensagem "Livro não encontrado"
+    li $v0, 4                # Syscall para imprimir string
+    la $a0, notFoundMessage  # Mensagem: Livro não encontrado
+    syscall
+    j return                 # Retorna após imprimir
+
+notAvailable:
+    # Imprimir mensagem "Livro não disponível"
+    li $v0, 4                # Syscall para imprimir string
+    la $a0, notAvailableMessage  # Mensagem: Livro não disponível
+    syscall
+    j return                 # Retorna após imprimir
