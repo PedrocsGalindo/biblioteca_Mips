@@ -53,7 +53,7 @@ space:      .byte 0x20     # espaço em branco
 # $s1 : indice do bufferLinha
 # $a0 : buffer(clearBuffer), buffer(commaInBuffer), arquivo(saveData), mensagem(showMsg), contador(cleardDisplay), caracterEscrito(inputUser)
 # $a1 : indice(clearBuffer), indice(commaInBuffer), buffer(saveData) 
-# $a2 : tamanhoString(saveData) 
+# $a2 : tamanhoString(saveData)
 main:
 
 	li $s0, 0   		# numero de elementos do bufferUser (para adicinar elemento o numero ta certo, mas para carregar é preciso diminuir 1)
@@ -79,7 +79,7 @@ main:
 	la $a0, bufferInput
 	la $a1, msgCreatBookLoan
 	jal checkUserFunc
-	beqz $a1, creatBookLoan
+	#beqz $a1, creatBookLoan
 	
 	la $a0, bufferInput
 	la $a1, msgCheckBookAvailability
@@ -106,9 +106,9 @@ checkUserFunc:
 	j checkUserFunc
 	
 termino:
-	li $t2, 0x20	     # virgula
+	li $t2, 0x20	     	  # virgula
 	beq $t0, $t2, equals      # verifica se a palavra procurada no bufferLinha chegou ao fim
-	beqz $t0, equals     # secundo bloco temrina em virgula, não tem espaço vazio
+	beqz $t0, equals     	  # secundo bloco temrina em virgula, nao tem espaco vazio
 	j diferente
 	
 equals:
@@ -214,7 +214,7 @@ seachUserByRegister:
 
 	
 searchStringOnFile:
-#Retorna $a1 -> 0 = encontrou , -1 = não encontrou
+#Retorna $a1 -> 0 = encontrou , -1 = nao encontrou
 #Parametros
 #$a1 -> bloco (1, 2 ou 3)
 #$a2 -> string procurada
@@ -383,153 +383,84 @@ solicitarhora:
 
         jr $ra  # Retorna da função
 
+bufferInputToUser:
+# $a0 -> indice bufferUser
+# $a1 -> indice bufferInput
+	la $t1, bufferInput
+	la $t0, bufferUser
+	add $t1, $t1, $a1	
+	add $t0, $t0, $a0
+	
+	lb $t3, 0($t1)		# recebe o caracter
+	li $t4, ' '
+	beq $t3, $t4, return	# se tiver acabado retorna
+	beqz $t3, return
+	sb $t3, 0($t0)		# salva o caracter
+	
+	addi $a0, $a0, 1 
+	addi $a1, $a1, 1
+	
+	j bufferInputToUser
+	
 #FUNCOES DE CRIACAO DE ELEMENTOS -----------------------------------------------------------------------------------------------------------------------
 creatUser:
 	addi $sp, $sp, -4   
 	sw $ra, 0($sp)     	     # salvar referencia
 	
+	li $a0, 0 		     # indiceUser
+	li $a1, 4		     # indiceInput
+	
 	#Nome
-	la $a0, msgQual          # parametros da funcao -> mensagem(showMsg)
-	jal showMsg
-	la $a0, msgNameUser          # parametros da funcao -> mensagem(showMsg)
-	jal showMsg
+	jal bufferInputToUser
 	
-	jal inputUser		   # Altera o indice
+	addi $a1, $a1, 1
+	move $t2, $a1
 	
-	#TESTE
-	move $a1, $s0
-	jal index30Block
-	move $s0, $a1			# atualiza o indice
-
 	la $a0, bufferUser  	     # parametros da funcao -> buffer(commaInBuffer) 
-	move $a1, $s0		     # parametros da funcao  -> indice do buffer (commaInBuffer)
+	li $a1, 30		     # parametros da funcao  -> indice do buffer (commaInBuffer)
 	jal commaInBuffer
-	addi $s0, $s0, 1
+	
+	move $a1, $t2
 	
 	#Matricula
-	la $a0, msgQual          # parametros da funcao -> mensagem(showMsg)
-	jal showMsg
-	la $a0, msgRegistrationCode  # parametros da funaco -> mensagem(showMsg)
-	jal showMsg
+	li $a0, 31		     # indiceUser
+	jal bufferInputToUser
+	addi $a1, $a1, 1
+	move $t2, $a1
 	
-	jal inputUser
-	
-	move $a1, $s0
-	jal index5Block
-	move $s0, $a1			# atualiza o indice
-	
-	la $a0, bufferUser  	     # parametros da funaco -> buffer(commaInBuffer)
-	move $a1, $s0		     # parametros da funcao  -> indice do buffer (commaInBuffer)
+	la $a0, bufferUser  	     # parametros da funaco -> buffer(	InBuffer)
+	li $a1, 36		     # parametros da funcao  -> indice do buffer (commaInBuffer)
 	jal commaInBuffer
-	addi $s0, $s0, 1
+	
+	move $a1, $t2
 	
 	#Curso
-	la $a0, msgQual          # parametros da função -> mensagem(showMsg)
-	jal showMsg
-	la $a0, msgCourseUser        # parametros da função -> mensagem(showMsg)
-	jal showMsg
-	jal inputUser
-	
-	move $a1, $s0
-	jal indexSecund30Block
-	move $s0, $a1			# atualiza o indice
+	li $a0, 37		     # indiceUser
+	jal bufferInputToUser
 	
 	#Quebra de linha
 	la $a0, bufferUser
-	add $a0, $a0, $s0
+	addi $a0, $a0, 67
 	li $t0, '\n'
 	sb $t0, 0($a0)
 	addi $s0, $s0,1
 	
 	#Mostrar Cadastro
 	la $a0, bufferUser
-	move $a1, $s0
+	li $a1, 68
 	jal showBuffer
 	
 	la $a0, usersFile	     # parametros da função -> arquivo(saveData) 
 	la $a1, bufferUser	     # parametros da função -> buffer(saveData) 
-	move $a2, $s0	 	     # parametros da função -> tamanhoString(saveData) 
+	li $a2, 68	 	     # parametros da função -> tamanhoString(saveData) 
 	jal saveData
 	
-	jal clearBufferUser
+	
 	
 	lw $ra, 0($sp)       	     # recupera referencia do chamdaor
 	addi $sp, $sp, 4    
 	
 	j return
-
-creatBookLoan:
-	addi $sp, $sp, -4   
-	sw $ra, 0($sp)     	     # salvar referencia
-
-	#Livro
-	la $a0, msgQual          # parametros da função -> mensagem(showMsg)
-	jal showMsg
-	la $a0, msgTitleBook          # parametros da função -> mensagem(showMsg)
-	jal showMsg
-	jal showMsg
-	
-	jal inputUser		   # Altera o indice
-	
-	move $a1, $s0
-	jal index30Block
-	move $s0, $a1			# atualiza o indice
-
-	la $a0, bufferUser  	     # parametros da função -> buffer(commaInBuffer) 
-	move $a1, $s0		     # parametros da função  -> indice do buffer (commaInBuffer)
-	jal commaInBuffer
-	addi $s0, $s0, 1
-	
-	#User_Registration
-	la $a0, msgQual          # parametros da função -> mensagem(showMsg)
-	jal showMsg
-	la $a0, msgRegistrationCode          # parametros da função -> mensagem(showMsg)
-	jal showMsg
-	
-	jal inputUser
-	
-	move $a1, $s0
-	jal index5Block
-	move $s0, $a1			# atualiza o indice
-	
-	la $a0, bufferUser  	     # parametros da função -> buffer(commaInBuffer)
-	move $a1, $s0		     # parametros da função  -> indice do buffer (commaInBuffer)
-	jal commaInBuffer
-	addi $s0, $s0, 1
-	
-	#Data_Retirada e Data_Devolução juntos no mesmo bloco, separados por espaço
-	#Data_Retirada 
-	
-	#Data_Devolução
-	
-	#Formatar Data_Retirada e Data_Devolução juntos
-	move $a1, $s0
-	jal indexSecund30Block
-	move $s0, $a1			# atualiza o indice
-	
-	#Quebra de linha
-	la $a0, bufferUser
-	add $a0, $a0, $s0
-	li $t0, '\n'
-	sb $t0, 0($a0)
-	addi $s0, $s0,1
-
-	#Mostrar Cadastro
-	la $a0, bufferUser
-	move $a1, $s0
-	jal showBuffer
-	
-	la $a0, booksFile	     # parametros da função -> arquivo(saveData) 
-	la $a1, bufferUser	     # parametros da função -> buffer(saveData) 
-	move $a2, $s0	 	     # parametros da função -> tamanhoString(saveData) 
-	jal saveData
-	
-	jal clearBufferUser
-	
-	lw $ra, 0($sp)       	     # recupera referencia do chamdaor
-	addi $sp, $sp, 4    
-			
-	j return	
 
 creatBook:
 	addi $sp, $sp, -4   
@@ -544,7 +475,7 @@ creatBook:
 	jal inputUser		   # Altera o indice
 	
 	move $a1, $s0
-	jal index30Block
+
 	move $s0, $a1			# atualiza o indice
 
 	la $a0, bufferUser  	     # parametros da função -> buffer(commaInBuffer) 
@@ -560,7 +491,7 @@ creatBook:
 	jal inputUser
 	
 	move $a1, $s0
-	jal index5Block
+
 	move $s0, $a1			# atualiza o indice
 	
 	la $a0, bufferUser  	     # parametros da função -> buffer(commaInBuffer)
@@ -587,7 +518,7 @@ creatBook:
 	jal inputUser
 	
 	move $a1, $s0
-	jal indexSecund30Block
+
 	move $s0, $a1			# atualiza o indice
 	
 	#Quebra de linha
@@ -616,31 +547,6 @@ creatBook:
 
 # FUNCOES MUITO USADAS --------------------------------------------------------------------------------------------------------------------
 
-# FUNCOES DE FORMATACAO DE DADOS ------------------------------------
-
-index30Block:
-# Indice vai para +30
-# Parametro
-
-# $a1 - > indice
-	li $a1, 30			# atualiza o indice
-	j return
-
-index5Block:
-# Indice vai para +5
-# Parametro
-# $a1 - > indice
-	li $a1, 36			# atualiza o indice
-	j return
-	
-indexSecund30Block:
-# Indice vai para +30
-# Parametro
-# $a1 - > indice
-	li $a1, 67			# atualiza o indice
-	j return
-	
-	
 # FUNCOES COLOCAR CARACTER ------------------------------------------
 breakIsbmAmount:
 # $a1 -> indice do buffer
