@@ -967,13 +967,13 @@ putDateLoanOnBufferUser:
     	sb   $t4, 0($t3)     # Armazena o primeiro dígito do dia
     	sb   $t5, 1($t3)     # Armazena o segundo dígito do dia
 
-    	# Inserir '/'
-    	li   $t6, 47         # ASCII de '/'
+    	# inserir '/'
+    	li   $t6, 47         # '/'
     	sb   $t6, 2($t3)
 
-    	# ---------------------------
-    	# Converter mês para caracteres ASCII
-    	# ---------------------------
+    	
+    	# converter mês para caracteres 
+    	
     	div  $t1, $zero, 10
     	mflo $t4
     	mfhi $t5
@@ -987,9 +987,9 @@ putDateLoanOnBufferUser:
     	# Inserir '/'
     	sb   $t6, 5($t3)
 
-    	# ---------------------------
-    	# Converter ano para caracteres ASCII
-    	# ---------------------------
+    	
+    	# converter ano para caracteres ASCII
+    	
     	div  $t2, $zero, 1000
     	mflo $t7             # Primeiro dígito do ano
     	mfhi $t2             # Resto (últimos três dígitos)
