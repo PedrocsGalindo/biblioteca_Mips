@@ -522,8 +522,8 @@ creatBook:
 	addi $a1, $a1, 1
 	move $t2, $a1		     # indice do Input
 	
-	sub $a3, $a3, $a1	     # numero de caracteres do autor
-	add $a1, $a3, 37	     # indice do ' - '
+	sub $a3, $a1, $a3	     # numero de caracteres do autor
+	add $a1, $a3, 36	     # indice do ' - '
 	
 	jal breakIsbmAmount
 	
@@ -542,16 +542,16 @@ creatBook:
 	addi $s0, $s0,1
 	
 	#Mostrar Cadastro
-	#la $a0, bufferUser
-	#li $a1, 68
-	#jal showBuffer
+	la $a0, bufferUser
+	li $a1, 68
+	jal showBuffer
 	
 	la $a0, booksFile	     # parametros da função -> arquivo(saveData) 
 	la $a1, bufferUser	     # parametros da função -> buffer(saveData) 
 	li $a2, 68	 	     # parametros da função -> tamanhoString(saveData) 
 	jal saveData
 	
-	#jal clearBufferUser
+	jal clearBufferUser
 	
 	lw $ra, 0($sp)       	     # recupera referencia do chamdaor
 	addi $sp, $sp, 4    
