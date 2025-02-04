@@ -6,7 +6,7 @@ booksFile:	.asciiz "books.txt"
 loanFile:	.asciiz "emprestimos.txt"	
 
 # MENSAGENS PADROES ----------------------------------------------------------------------------------------
-msgMatriculaNaoEncontrada: .asciiz "Numero de matricula não encontrada, escreva novamente\n"
+msgMatriculaNaoEncontrada: .asciiz "Numero de matricula nÃ£o encontrada, escreva novamente\n"
 msgQual: .asciiz "\nQual "
 msgTitleBook: .asciiz "o titulo do livro\n"
 msgAuthorBook: .asciiz "o nome do autor\n"
@@ -27,19 +27,26 @@ msgCheckBookAvailability: .asciiz "ckba"
 
 msg:    .asciiz "Hora atual: "
 sep:    .asciiz ":"
-newl:   .asciiz "\n"  # Nova linha para formatar a saída da hora
+newl:   .asciiz "\n"  # Nova linha para formatar a saÃ­da da hora
 prompt: .asciiz "Digite a data (dia/mes/ano): "
-input:  .space 11  # Espaço para armazenar a data (10 caracteres + 1 para o terminador nulo)
+input:  .space 11  # EspaÃ§o para armazenar a data (10 caracteres + 1 para o terminador nulo)
 
 
 
+#Para a data
 
+.align 2
+promptDay: .asciiz "Enter day (1-31): "        # Mensagem para o dia
+promptMonth: .asciiz "Enter month (1-12): "     # Mensagem para o mês
+promptYear: .asciiz "Enter year (yyyy): "       # Mensagem para o ano
+newline: .asciiz "\n"  
 
+#Para a data
 
 msgTeste: .asciiz "12345"
 
 # BUFFERS --------------------------------------------------------------------------------------------------
-			  # Nao pode ter espao nos espaços do bloco (talvez depois melhorar a logica para suportar isso)
+			  # Nao pode ter espao nos espaÃ§os do bloco (talvez depois melhorar a logica para suportar isso)
 bufferInput:  .space 100  # Comando do usuario 
 bufferUser:  .space 68    # 30 - primeiro bloco, 1 - virgula,  5 - segundo bloco, 1 - virgula,  30 - segundo bloco, 1 - quebra de linha
 bufferLinha: .space 68    # 30 - primeiro bloco, 1 - virgula,  5 - segundo bloco, 1 - virgula,  30 - segundo bloco, 1 - quebra de linha
@@ -47,13 +54,13 @@ bufferByte: .space 1
 bufferWord: .space 4
                        
 backspace:  .byte 0x08    
-space:      .byte 0x20     # espaço em branco 
+space:      .byte 0x20     # espaÃ§o em branco 
 
 .text
 .globl main
 
 # REGISTRADORES FIXOS ----------------------------------------------------------------------------------------
-# Sempre que for usar os registradores fixos  necessario varificar se vai alterar algum outro valor, ou caso va usar alguma função que tenha esses registradores (necessario manter uma copia temporaria)
+# Sempre que for usar os registradores fixos  necessario varificar se vai alterar algum outro valor, ou caso va usar alguma funÃ§Ã£o que tenha esses registradores (necessario manter uma copia temporaria)
 # Caso necessario antes do input tem que salvar o valor de $a0 
 
 # $s0 : indice do bufferUser, indice do bufferUser(inputUser), 
@@ -63,7 +70,7 @@ space:      .byte 0x20     # espaço em branco
 # $a2 : tamanhoString(saveData)
 main:
 
-	li $s0, 0   		# numero de elementos do bufferUser (para adicinar elemento o numero ta certo, mas para carregar é preciso diminuir 1)
+	li $s0, 0   		# numero de elementos do bufferUser (para adicinar elemento o numero ta certo, mas para carregar Ã© preciso diminuir 1)
 	li $s1, 0		# sera usado para salvar referencia do descritor de arquivo (para poder iterar)
 	
 	la $a0, banner
@@ -249,7 +256,7 @@ searchStringOnFile:
 	li $t0, 1	  	     
 	li $t4, 2    
 	li $t2, 3
-	li $a0, 0				# Indice dos buffers (para comparar os caracteres em posições corretas)
+	li $a0, 0				# Indice dos buffers (para comparar os caracteres em posiÃ§Ãµes corretas)
 	la $a3, bufferLinha			# endereco do primiero elemento do bloco 1
 	beq $a1, $t0, searchBlock
 	addi $a3, $a3, 31			# endereco do primiero elemento do bloco 2
@@ -290,7 +297,7 @@ searchBlock:
 
 endSearch:
 	li $t4, 0x2C		     # virgula
-	beq $a3, $t4, findString     # secundo bloco temrina em virgula, não tem espaço vazio
+	beq $a3, $t4, findString     # secundo bloco temrina em virgula, nÃ£o tem espaÃ§o vazio
 	beq $a3, $zero, findString   # verifica se ambas as palavras terminaram
 	j diferents
 
@@ -313,8 +320,8 @@ diferents:
 #FUNCOES PARA DATA---------------------------------------------------------------------------------------------------------------------------------------------------
 
 solicitarhora: #ele entrega a hora e solicita a data 
-        # Obtém o tempo atual em milissegundos (syscall 30)
-        li $v0, 30      # syscall 30: obtém o tempo do sistema (em milissegundos desde a época)
+        # ObtÃ©m o tempo atual em milissegundos (syscall 30)
+        li $v0, 30      # syscall 30: obtÃ©m o tempo do sistema (em milissegundos desde a Ã©poca)
         syscall
         move $t0, $a0   # Armazena a parte baixa do tempo em $t0 (milissegundos)
         move $t1, $a1   # Armazena a parte alta do tempo em $t1 (milissegundos)
@@ -322,8 +329,8 @@ solicitarhora: #ele entrega a hora e solicita a data
         # Converte para segundos totais (milissegundos / 1000)
         li $t2, 1000    # Carrega o valor 1000 em $t2 (usado como divisor para converter milissegundos para segundos)
         divu $t0, $t2   # Divide a parte baixa (milissegundos) por 1000
-        mflo $t3        # Armazena o resultado da divisão (segundos totais) em $t3
-        mfhi $t4        # Armazena o resto da divisão (milissegundos restantes) em $t4
+        mflo $t3        # Armazena o resultado da divisÃ£o (segundos totais) em $t3
+        mfhi $t4        # Armazena o resto da divisÃ£o (milissegundos restantes) em $t4
         
         divu $t1, $t2   # Divide a parte alta do tempo (milissegundos) por 1000 para converter para segundos
         mflo $t5        # Armazena os segundos da parte alta em $t5
@@ -333,78 +340,78 @@ solicitarhora: #ele entrega a hora e solicita a data
         # Calcula as horas no formato UTC
         li $t6, 3600    # Carrega o valor 3600 (segundos em 1 hora) em $t6
         divu $t3, $t6   # Divide os segundos totais por 3600 para calcular as horas
-        mflo $t7        # Armazena o número de horas em $t7
-        rem $t7, $t7, 24  # Calcula o resto da divisão para garantir que as horas estejam no intervalo 0-23 (hora do dia)
+        mflo $t7        # Armazena o nÃºmero de horas em $t7
+        rem $t7, $t7, 24  # Calcula o resto da divisÃ£o para garantir que as horas estejam no intervalo 0-23 (hora do dia)
 
-        # Ajuste de fuso horário: subtrai 1 hora e 13 minutos (4380 segundos)
+        # Ajuste de fuso horÃ¡rio: subtrai 1 hora e 13 minutos (4380 segundos)
         li $t8, 4380    # Carrega o valor 4380 (1 hora e 13 minutos em segundos) em $t8
-        sub $t3, $t3, $t8  # Subtrai 4380 segundos (ajuste de fuso horário UTC-1h13min)
+        sub $t3, $t3, $t8  # Subtrai 4380 segundos (ajuste de fuso horÃ¡rio UTC-1h13min)
 
         # Subtrai mais 3 horas (10.800 segundos) do tempo
         li $t9, 10800   # Carrega o valor 10800 (3 horas em segundos) em $t9
-        sub $t3, $t3, $t9  # Subtrai 10.800 segundos do total de segundos (ajuste de fuso horário UTC-3h)
+        sub $t3, $t3, $t9  # Subtrai 10.800 segundos do total de segundos (ajuste de fuso horÃ¡rio UTC-3h)
 
-        # Calcula novas horas após os ajustes
+        # Calcula novas horas apÃ³s os ajustes
         divu $t3, $t6   # Divide os segundos restantes por 3600 para calcular as horas ajustadas
-        mflo $t7        # Armazena o número de horas ajustadas em $t7
-        rem $t7, $t7, 24  # Calcula o resto da divisão para garantir que as horas ajustadas estejam no intervalo 0-23
+        mflo $t7        # Armazena o nÃºmero de horas ajustadas em $t7
+        rem $t7, $t7, 24  # Calcula o resto da divisÃ£o para garantir que as horas ajustadas estejam no intervalo 0-23
 
         # Imprimir a hora ajustada
-        li $v0, 4       # Código da syscall para imprimir uma string
-        la $a0, msg     # Endereço da mensagem "Hora ajustada: "
+        li $v0, 4       # CÃ³digo da syscall para imprimir uma string
+        la $a0, msg     # EndereÃ§o da mensagem "Hora ajustada: "
         syscall
 
         # Imprime as horas
         move $a0, $t7   # Move o valor das horas ajustadas para $a0
-        li $v0, 1       # Código da syscall para imprimir um número inteiro
+        li $v0, 1       # CÃ³digo da syscall para imprimir um nÃºmero inteiro
         syscall
 
         # Imprime ":" (separador)
-        li $v0, 4       # Código da syscall para imprimir uma string
-        la $a0, sep     # Endereço do separador ":"
+        li $v0, 4       # CÃ³digo da syscall para imprimir uma string
+        la $a0, sep     # EndereÃ§o do separador ":"
         syscall
 
         # Calcula os minutos
         li $t6, 60      # Carrega o valor 60 (segundos em 1 minuto) em $t6
         divu $t3, $t6   # Divide os segundos restantes por 60 para calcular os minutos
-        mfhi $t8        # Armazena os segundos restantes após calcular as horas em $t8
+        mfhi $t8        # Armazena os segundos restantes apÃ³s calcular as horas em $t8
         mflo $t9        # Armazena os minutos totais em $t9
         rem $t9, $t9, 60  # Calcula os minutos atuais, no intervalo 0-59
 
         # Imprime os minutos
         move $a0, $t9   # Move o valor dos minutos para $a0
-        li $v0, 1       # Código da syscall para imprimir um número inteiro
+        li $v0, 1       # CÃ³digo da syscall para imprimir um nÃºmero inteiro
         syscall
 
         # Imprime ":" (separador)
-        li $v0, 4       # Código da syscall para imprimir uma string
-        la $a0, sep     # Endereço do separador ":"
+        li $v0, 4       # CÃ³digo da syscall para imprimir uma string
+        la $a0, sep     # EndereÃ§o do separador ":"
         syscall
 
         # Imprime os segundos restantes
         move $a0, $t8   # Move o valor dos segundos restantes para $a0
-        li $v0, 1       # Código da syscall para imprimir um número inteiro
+        li $v0, 1       # CÃ³digo da syscall para imprimir um nÃºmero inteiro
         syscall
 
         # Imprime uma nova linha
-        li $v0, 4       # Código da syscall para imprimir uma string
-        la $a0, newl    # Endereço da string de nova linha
+        li $v0, 4       # CÃ³digo da syscall para imprimir uma string
+        la $a0, newl    # EndereÃ§o da string de nova linha
         syscall
 
-        # Solicitar a data ao usuário
-        li $v0, 4         # Código da syscall para imprimir uma string
-        la $a0, prompt    # Endereço da string do prompt
+        # Solicitar a data ao usuÃ¡rio
+        li $v0, 4         # CÃ³digo da syscall para imprimir uma string
+        la $a0, prompt    # EndereÃ§o da string do prompt
         syscall
 
-        # Ler a entrada do usuário (data)
-        li $v0, 8         # Código da syscall para ler uma string
-        la $a0, input     # Endereço onde a string será armazenada
+        # Ler a entrada do usuÃ¡rio (data)
+        li $v0, 8         # CÃ³digo da syscall para ler uma string
+        la $a0, input     # EndereÃ§o onde a string serÃ¡ armazenada
         li $a1, 11        # Limite de caracteres (10 para a data e 1 para o terminador nulo)
         syscall
 
-        # Aqui você pode processar ou validar a data conforme necessário
+        # Aqui vocÃª pode processar ou validar a data conforme necessÃ¡rio
 
-        jr $ra  # Retorna da função
+        jr $ra  # Retorna da funÃ§Ã£o
 
 bufferInputToUser:
 # $a0 -> indice bufferUser
@@ -473,9 +480,9 @@ creatUser:
 	li $a1, 68
 	jal showBuffer
 	
-	la $a0, usersFile	     # parametros da função -> arquivo(saveData) 
-	la $a1, bufferUser	     # parametros da função -> buffer(saveData) 
-	li $a2, 68	 	     # parametros da função -> tamanhoString(saveData) 
+	la $a0, usersFile	     # parametros da funÃ§Ã£o -> arquivo(saveData) 
+	la $a1, bufferUser	     # parametros da funÃ§Ã£o -> buffer(saveData) 
+	li $a2, 68	 	     # parametros da funÃ§Ã£o -> tamanhoString(saveData) 
 	jal saveData
 	
 	
@@ -548,9 +555,9 @@ creatBook:
 	li $a1, 68
 	jal showBuffer
 	
-	la $a0, booksFile	     # parametros da função -> arquivo(saveData) 
-	la $a1, bufferUser	     # parametros da função -> buffer(saveData) 
-	li $a2, 68	 	     # parametros da função -> tamanhoString(saveData) 
+	la $a0, booksFile	     # parametros da funÃ§Ã£o -> arquivo(saveData) 
+	la $a1, bufferUser	     # parametros da funÃ§Ã£o -> buffer(saveData) 
+	li $a2, 68	 	     # parametros da funÃ§Ã£o -> tamanhoString(saveData) 
 	jal saveData
 	
 	jal clearBufferUser
@@ -624,9 +631,9 @@ creatBookLoan:
 	li $a1, 68
 	jal showBuffer
 	
-	la $a0, booksFile	     # parametros da função -> arquivo(saveData) 
-	la $a1, bufferUser	     # parametros da função -> buffer(saveData) 
-	li $a2, 68	 	     # parametros da função -> tamanhoString(saveData) 
+	la $a0, booksFile	     # parametros da funÃ§Ã£o -> arquivo(saveData) 
+	la $a1, bufferUser	     # parametros da funÃ§Ã£o -> buffer(saveData) 
+	li $a2, 68	 	     # parametros da funÃ§Ã£o -> tamanhoString(saveData) 
 	jal saveData
 	
 	jal clearBufferUser
@@ -638,7 +645,7 @@ creatBookLoan:
 	
 calculateReturnDate:
 # parametro
-# $a0 -> endere�o da onde deve ser impresso (presica voltar 12 posi��es par apegar a data atual)
+# $a0 -> endereço da onde deve ser impresso (presica voltar 12 posições par apegar a data atual)
 # FUNCOES MUITO USADAS --------------------------------------------------------------------------------------------------------------------
 
 # FUNCOES COLOCAR CARACTER ------------------------------------------
@@ -649,7 +656,7 @@ breakIsbmAmount:
 	
 	la $t0, bufferUser
 	
-	add $t0, $t0, $a1	     # endereço do proximo elemento
+	add $t0, $t0, $a1	     # endereÃ§o do proximo elemento
 	sb $t1, 0($t0)      	   
 	  
 	addi $t0, $t0, 1
@@ -689,7 +696,7 @@ barInBuffer:
 # FUNCOES DE BUFFER ------------------------------------------
 
 showBuffer:
-# Parâmetros
+# ParÃ¢metros
 # $a0 -> buffer
 # $a1 -> indice (numero de elementos no buffer)
 	addi $sp, $sp, -4   
@@ -712,9 +719,9 @@ loopshowBuffer:
 	li $v0, 11          # imprimir caractere
 	syscall
 	move $a0, $t1
-	addi $a0, $a0, 1    # Avança para o próximo caractere
-	beqz $a1, return    # Se o índice for 0, chegou no ultimo
-	j loopshowBuffer       # Continua a exibição
+	addi $a0, $a0, 1    # AvanÃ§a para o prÃ³ximo caractere
+	beqz $a1, return    # Se o Ã­ndice for 0, chegou no ultimo
+	j loopshowBuffer       # Continua a exibiÃ§Ã£o
 
 # FUNCOES DE MMIO -----------------------------------------------
 
@@ -722,13 +729,13 @@ loopshowBuffer:
 	
 
 inputUser:
-	li $t0, 0xFFFF0000         # endereço do keyboard status
+	li $t0, 0xFFFF0000         # endereÃ§o do keyboard status
 	lw $t1, 0($t0)             # status do teclado, bit menos significativo = 0 -> sem caracter indisponivel
-	andi $t1, $t1, 1           # operação AND para verificar o bit menos significativo
+	andi $t1, $t1, 1           # operaÃ§Ã£o AND para verificar o bit menos significativo
 	beq $t1, $zero, inputUser     
 
 	# le caractere do teclado
-	li $t0, 0xFFFF0004         # endereço do keyboard data
+	li $t0, 0xFFFF0004         # endereÃ§o do keyboard data
 	lw $a0, 0($t0)             # carrega o caracter
 	li $t3, 0x0A 		   # Enter
 	beq $a0, $t3, return
@@ -740,12 +747,12 @@ inputUser:
 	
 loopDisplay:
 #parametro $a0 -> byte pra exibir
-	li $t0, 0xFFFF0008       # endereço do display status
+	li $t0, 0xFFFF0008       # endereÃ§o do display status
 	lw $t1, 0($t0)           # status do Display, bit menos significativo = 0 -> display indisponivel
 	andi $t1, $t1, 1         
 	beq $t1, $zero, loopDisplay
 
-	li $t0, 0xFFFF000C       # endereço do display data
+	li $t0, 0xFFFF000C       # endereÃ§o do display data
 	sw $a0, 0($t0)           # escrita	
 	j inputUser      
 
@@ -754,16 +761,16 @@ cleardDisplay:
 	j clearLoop
 	
 clearLoop:
-	li $t1, 0xFFFF0008         # endereço do display status
+	li $t1, 0xFFFF0008         # endereÃ§o do display status
 	lw $t2, 0($t1)             # status do display
 	andi $t2, $t2, 1
 	beq $t2, $zero, clearLoop  # se ocupado, espera
-	li $t1, 0xFFFF000C         # endereço do display data
+	li $t1, 0xFFFF000C         # endereÃ§o do display data
 	
 	li $t0, 0x0A               # pula linha
 	sw $t0, 0($t1)             # escreve
 	subi $a0, $a0, 1           # -1 contador
-	bgtz $a0, clearLoop        # Repete até o contador chegar a 0
+	bgtz $a0, clearLoop        # Repete atÃ© o contador chegar a 0
 
  	jr $ra    
  	
@@ -772,7 +779,7 @@ showMsg:
 # $a0 -> mensagem
 	lb $t0, 0($a0)		  #caractere
 	beqz $t0, return	  #verifica se terminou
-	li $t1, 0xFFFF0008        # endereço do display status
+	li $t1, 0xFFFF0008        # endereÃ§o do display status
 	j loopDisplaymsg    	  #loop escrita
 	
 loopDisplaymsg:
@@ -780,14 +787,14 @@ loopDisplaymsg:
 	andi $t2, $t2, 1         
 	beq $t2, $zero, loopDisplaymsg  # se ocupado, espera
 
-	li $t1, 0xFFFF000C       # endereço do display data
+	li $t1, 0xFFFF000C       # endereÃ§o do display data
 	sw $t0, 0($t1)           # escreve
 
 	addi $a0, $a0, 1  	 # proximo caractere
 	j showMsg    
 
 saveData:
-# Parâmetros
+# ParÃ¢metros
 # $a0 -> Nome do arquivo
 # $a1 -> Endereco da string a ser salva (buffer)
 # $a2 -> Tamanho da string a ser salva
@@ -805,7 +812,7 @@ saveData:
 	# Escrita no arquivo
 	li $v0, 15           # escrita
 	move $a0, $t3        # descritor do arquivo
-	move $a1, $t0        # endereço String
+	move $a1, $t0        # endereÃ§o String
 	move $a2, $t1        # tamanho String
 	syscall
 	
@@ -835,7 +842,7 @@ readFile:
 	j return
 	
 endOfFile:
-	li $a1, -1		# Caso chegue ao final do arquivo, não encontrou a string 
+	li $a1, -1		# Caso chegue ao final do arquivo, nÃ£o encontrou a string 
 	j closeFile
 	
 closeFile:
@@ -863,8 +870,8 @@ clearBufferUser:
 	j return
 
 loopClearBuffer:
-# $a0 -> endereço buffer
-# $a1 -> endereço buffer + contador
+# $a0 -> endereÃ§o buffer
+# $a1 -> endereÃ§o buffer + contador
 	li $t0, 0x00		     # Nulo	
 	sb $t0, 0($a0)
 	addi $a0, $a0, 1
@@ -882,3 +889,112 @@ imprimirBanner:
  	 la $a0, banner
  	 
  	 syscall 
+
+
+##Para calcular a data de devolução------------------------------------------------- 
+####main:
+    # Solicita o dia
+    li $v0, 4                  # Código de serviço para imprimir string
+    la $a0, promptDay          # Endereço da mensagem
+    syscall
+
+    li $v0, 5                  # Código de serviço para ler inteiro
+    syscall
+    move $t1, $v0              # Armazena o valor do dia em $t1
+
+    # Adiciona uma quebra de linha após a entrada do dia
+    li $v0, 4                  # Código de serviço para imprimir string
+    la $a0, newline            # Endereço da quebra de linha
+    syscall
+
+    # Solicita o mês
+    li $v0, 4                  # Código de serviço para imprimir string
+    la $a0, promptMonth        # Endereço da mensagem
+    syscall
+
+    li $v0, 5                  # Código de serviço para ler inteiro
+    syscall
+    move $t2, $v0              # Armazena o valor do mês em $t2
+
+    # Adiciona uma quebra de linha após a entrada do mês
+    li $v0, 4                  # Código de serviço para imprimir string
+    la $a0, newline            # Endereço da quebra de linha
+    syscall
+
+    # Solicita o ano
+    li $v0, 4                  # Código de serviço para imprimir string
+    la $a0, promptYear         # Endereço da mensagem
+    syscall
+
+    li $v0, 5                  # Código de serviço para ler inteiro
+    syscall
+    move $t3, $v0              # Armazena o valor do ano em $t3
+
+    # Adiciona uma quebra de linha após a entrada do ano
+    li $v0, 4                  # Código de serviço para imprimir string
+    la $a0, newline            # Endereço da quebra de linha
+    syscall
+
+    # Adicionar 10 dias ao dia
+    addi $t1, $t1, 10          # Incrementa 10 no dia
+
+    # Verificar se o dia ultrapassou 31
+    bgt $t1, 31, adjustMonth   # Se o dia ultrapassou 31, ajusta o mês
+
+    j displayDate
+
+adjustMonth:
+    sub $t1, $t1, 31           # Subtrai 31 dias para ajustar o mês
+    addi $t2, $t2, 1           # Avança para o próximo mês
+
+    # Se o mês for maior que 12, ajusta o ano
+    bgt $t2, 12, adjustYear    # Se o mês for maior que 12 (dezembro), ajusta o ano
+
+    j displayDate
+
+adjustYear:
+    addi $t3, $t3, 1           # Incrementa o ano
+    li $t2, 1                  # Reseta o mês para janeiro
+
+displayDate:
+    # Exibir a nova data no formato dd/mm/aaaa
+    li $v0, 4                  # Código de serviço para imprimir string
+    la $a0, newline            # Quebra de linha
+    syscall
+
+    li $v0, 4                  # Código de serviço para imprimir string
+    la $a0, promptDay          # Endereço da mensagem
+    syscall
+
+    move $a0, $t1              # Passa o valor do dia para $a0
+    li $v0, 1                  # Código de serviço para imprimir inteiro
+    syscall
+
+    li $v0, 4                  # Código de serviço para imprimir string
+    la $a0, promptMonth        # Endereço da mensagem
+    syscall
+
+    move $a0, $t2              # Passa o valor do mês para $a0
+    li $v0, 1                  # Código de serviço para imprimir inteiro
+    syscall
+
+    li $v0, 4                  # Código de serviço para imprimir string
+    la $a0, promptYear         # Endereço da mensagem
+    syscall
+
+    move $a0, $t3              # Passa o valor do ano para $a0
+    li $v0, 1                  # Código de serviço para imprimir inteiro
+    syscall
+
+    # Exibir uma nova linha após mostrar a data
+    li $v0, 4                  # Código de serviço para imprimir string
+    la $a0, newline            # Quebra de linha
+    syscall
+
+    # Finaliza a execução
+    li $v0, 10                 # Código de serviço para terminar o programa
+    syscall
+#---------------------------------------
+
+
+
