@@ -1,8 +1,7 @@
 Programacao,Donald Knuth,9780201896831,10
 Assembly,Richard H. W.,9780131841738,15
-Estruturas C,Robert L. Kruse,9780132163373,5
-Algoritmos,Tannenbaum,9780132064569,7
-Design Patterns,Erich Gamma,9780201633610,8
-Concorrencia,Herb Sutter,9780321457707,6
-Compiladores,A. V. Aho,9780321486813,9
-Redes,Tanenbaum,9780132126953,14
+Estruturas de Dados,Mark A. Weiss,9780133001208,12
+Algoritmos,Robert Sedgewick,9780321573513,18
+Banco de Dados,Abraham Silberschatz,9780078022159,14
+Compiladores,Alfred V. Aho,9780321486813,20
+Inteligência Artificial,Stuart Russell,9780134610993,16
