@@ -26,6 +26,7 @@ msgCreatBook: .asciiz "crb"
 msgCreatBookLoan: .asciiz "crbl"
 msgCheckBookAvailability: .asciiz "ckba" 
 msgListarLivros: .asciiz "llr"
+msgRemoverRegistroLivro: .asciiz "rmvb"
 
 msgjumpLine: .asciiz "\n"
 msg:    .asciiz "Hora atual: "
@@ -65,9 +66,7 @@ space:      .byte 0x20     # espaco em branco
 # $a0 : buffer(clearBuffer), buffer(commaInBuffer), arquivo(saveData), mensagem(showMsg), contador(cleardDisplay), caracterEscrito(inputUser)
 # $a1 : indice(clearBuffer), indice(commaInBuffer), buffer(saveData) 
 # $a2 : tamanhoString(saveData)
-main:
-	jal listarLivros
-	
+main:	
 	li $s0, 0   		# numero de elementos do bufferUser (para adicinar elemento o numero ta certo, mas para carregar é preciso diminuir 1)
 	li $s1, 0		# sera usado para salvar referencia do descritor de arquivo (para poder iterar)
 	
@@ -104,6 +103,11 @@ main:
 	la $a1, msgListarLivros
 	jal checkUserFunc
 	beqz $a1, listarLivros
+	
+	la $a0, bufferInput
+	la $a1, msgRemoverRegistroLivro
+	jal checkUserFunc
+	beqz $a1, removerRegistroLivro
 	
 	#jal solicitarhora #para pegar a hora atual
 	
@@ -225,7 +229,18 @@ LimpaArquivo:
         # Finalizar o programa
         li $v0, 10
         syscall
-    
+   
+isbmInputToIsbm:
+	la $t0, bufferInput
+	la $t1, bufferISBN
+	add $t0, $t0, $a0	#endereco bufferInput + indice
+	add $t1, $t1, $a1	#endereco bufferISBN + indice
+	lb $t0, 0($t0)
+	blez $t0, return	#verifica se chegou ao fim
+	sb $t0, 0($t1)
+	addi $a0, $a0, 1
+	addi $a1, $a1, 1
+	j isbmInputToIsbm
     
 removerRegistroLivro: 
 	#abrindo o arquivo de livros
@@ -235,17 +250,14 @@ removerRegistroLivro:
 	la, $a0, local_temp
 	jal abrirArquivoEscrita
 	#s5 cont�m o descritor de local_temp
-	#imprimindo mensagem do ISBN
-	li $v0, 4
-	la $a0, msgISBN
-	syscall 
-	#pegando o ISBN do usuario
-	li $v0,8
-	la $a0, bufferISBN
-	li $a1,14
-	syscall
-	#fechando os arquivos
 	
+	li $a0, 5		#posicao no bufferInput que contem o isbm
+	li $a1, 0
+	jal isbmInputToIsbm
+	la $t1, bufferISBN
+	add $t1, $t1, $a1	#endereco bufferISBN + indice
+	li $t0, ','
+	sb $t0, 0($t1)
 	
 	#Esse loop transfere linha por linha do arquivo de Acervo, e transfere para o arquivo temporario, exceto a linha que eu quero apagar
 	loopTransferirRegistroLivroTemp:
