@@ -9,15 +9,6 @@ booksFile:	.asciiz "books.txt"
 loanFile:	.asciiz "emprestimos.txt"	
 
 # MENSAGENS PADROES ----------------------------------------------------------------------------------------
-msgMatriculaNaoEncontrada: .asciiz "Numero de matricula nÃ£o encontrada, escreva novamente\n"
-msgQual: .asciiz "\nQual "
-msgTitleBook: .asciiz "o titulo do livro\n"
-msgAuthorBook: .asciiz "o nome do autor\n"
-msgISBNBook: .asciiz "o IBSN\n"
-msgQuantBook: .asciiz "Quantos livros disponiveis\n"
-msgNameUser: .asciiz "o nome do Estudante\n"
-msgRegistrationCode: .asciiz "o numero de matricula\n"
-msgCourseUser: .asciiz "o curso do Estudante\n"
 banner : .asciiz "TurmaDoCodigo-shell>>"
 
 #Formato de entrada "comando arg1 arg2 arg3 ..."
@@ -33,11 +24,6 @@ sep:    .asciiz ":"
 newl:   .asciiz "\n"  # Nova linha para formatar a saÃ­da da hora
 prompt: .asciiz "Digite a data (dia/mes/ano): "
 input:  .space 11  # EspaÃ§o para armazenar a data (10 caracteres + 1 para o terminador nulo)
-
-
-
-
-
 
 msgTeste: .asciiz "12345"
 
@@ -613,7 +599,6 @@ creatBookLoan:
 	#Quantidade de livros
 	move $a0, $t3		     # indiceUser
 	jal calculateReturnDate
-	jal bufferInputToUser
 	
 	#Quebra de linha
 	la $a0, bufferUser
@@ -639,9 +624,6 @@ creatBookLoan:
 	
 	j return
 	
-calculateReturnDate:
-# parametro
-# $a0 -> endereço da onde deve ser impresso (presica voltar 12 posições par apegar a data atual)
 # FUNCOES MUITO USADAS --------------------------------------------------------------------------------------------------------------------
 
 # FUNCOES COLOCAR CARACTER ------------------------------------------
@@ -874,12 +856,12 @@ endRun:
 	li $v0, 10   
 	syscall      
 return:
-	jr $ra]
+	jr $ra
 	
 calculateReturnDate:
 # parametro
-# $a0 -> endereço da onde deve ser impresso (presica voltar 12 posições par apegar a data atual)
-	
+# $a0 -> endereço da onde deve ser impresso (presica voltar 13 posições par apegar a data atual)
+	addi $a0, $a0, -13
 	#Dia
     	lb   $t1, 0($a0)    # decimal
     	lb   $t2, 1($a0)    # unidade
@@ -932,8 +914,8 @@ calculateReturnDate:
 
     	# Verificar se o dia ultrapassou 31
     	bgt $t1, 31, adjustMonth   # Se o dia ultrapassou 31, ajusta o mês
-
-    	j displayDate
+    	
+    	j putDateLoanOnBufferUser
 
 adjustMonth:
     	sub $t1, $t1, 31           # Subtrai 31 dias para ajustar o mês
@@ -941,9 +923,76 @@ adjustMonth:
 
     	# Se o mês for maior que 12, ajusta o ano
     	bgt $t2, 12, adjustYear    # Se o mês for maior que 12 (dezembro), ajusta o ano
-
-    	j displayDate
+    	j putDateLoanOnBufferUser
 
 adjustYear:
     	addi $t3, $t3, 1           # Incrementa o ano
     	li $t2, 1                  # Reseta o mês para janeiro
+    	j putDateLoanOnBufferUser
+    	
+putDateLoanOnBufferUser:
+# $t1 -> dia
+# $t2 -> mes
+# $t4 -> Ano
+	
+	addi  $t3, $a0, 13  # Ponteiro para armazenar a string
+   	# Converter dia para caracteres 
+    	
+    	div  $t0, $zero, 10  # $LO = dia / 10, $HI = dia % 10
+    	mflo $t4             # Primeiro dígito (dezena)
+    	mfhi $t5             # Segundo dígito (unidade)
+
+    	addi $t4, $t4, 48    # Converter para ASCII
+    	addi $t5, $t5, 48
+
+    	sb   $t4, 0($t3)     # Armazena o primeiro dígito do dia
+    	sb   $t5, 1($t3)     # Armazena o segundo dígito do dia
+
+    	# Inserir '/'
+    	li   $t6, 47         # ASCII de '/'
+    	sb   $t6, 2($t3)
+
+    	# ---------------------------
+    	# Converter mês para caracteres ASCII
+    	# ---------------------------
+    	div  $t1, $zero, 10
+    	mflo $t4
+    	mfhi $t5
+
+    	addi $t4, $t4, 48
+    	addi $t5, $t5, 48
+
+    	sb   $t4, 3($t3)     # Armazena primeiro dígito do mês
+    	sb   $t5, 4($t3)     # Armazena segundo dígito do mês
+
+    	# Inserir '/'
+    	sb   $t6, 5($t3)
+
+    	# ---------------------------
+    	# Converter ano para caracteres ASCII
+    	# ---------------------------
+    	div  $t2, $zero, 1000
+    	mflo $t7             # Primeiro dígito do ano
+    	mfhi $t2             # Resto (últimos três dígitos)
+
+    	addi $t7, $t7, 48
+    	sb   $t7, 6($t3)
+
+   	 div  $t2, $zero, 100
+    	mflo $t7             # Segundo dígito do ano
+    	mfhi $t2             # Últimos dois dígitos
+
+    	addi $t7, $t7, 48
+    	sb   $t7, 7($t3)
+
+    	div  $t2, $zero, 10
+    	mflo $t7             # Terceiro dígito do ano
+    	mfhi $t2             # Último dígito do ano
+
+    	addi $t7, $t7, 48
+    	sb   $t7, 8($t3)
+
+    	sb   $t2, 9($t3)
+
+	j return
+	
