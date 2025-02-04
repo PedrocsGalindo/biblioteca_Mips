@@ -557,7 +557,85 @@ creatBook:
 	addi $sp, $sp, 4    
 	
 	j return
-
+	
+creatBookLoan:
+	addi $sp, $sp, -4   
+	sw $ra, 0($sp)     	     # salvar referencia
+	
+	li $a0, 0 		     # indiceUser
+	li $a1, 4		     # indiceInput
+	
+	#Matricula
+	jal bufferInputToUser
+	
+	addi $a1, $a1, 1
+	move $t2, $a1
+	
+	la $a0, bufferUser  	     # parametros da funcao -> buffer(commaInBuffer) 
+	li $a1, 30		     # parametros da funcao  -> indice do buffer (commaInBuffer)
+	jal commaInBuffer
+	
+	move $a1, $t2
+	
+	#ISBM
+	li $a0, 31		     # indiceUser
+	jal bufferInputToUser
+	addi $a1, $a1, 1
+	move $t2, $a1
+	
+	la $a0, bufferUser  	     # parametros da funaco -> buffer(commaInBuffer)
+	li $a1, 36		     # parametros da funcao  -> indice do buffer (commaInBuffer)
+	jal commaInBuffer
+	
+	move $a1, $t2		     # indice do Input
+	
+	#Data atual
+	li $a0, 37		     # indiceUser
+	move $a3, $a1		     # indice atual do bufferInput, sera usado para calcular quantos caracteres foram lidos
+	jal bufferInputToUser
+	
+	addi $a1, $a1, 1
+	move $t2, $a1		     # indice do Input
+	
+	sub $a3, $a1, $a3	     # numero de caracteres do autor
+	add $a1, $a3, 36	     # indice do ' - '
+	
+	jal breakIsbmAmount
+	
+	move $t3, $a1
+	move $a1, $t2		     # indice do Input
+	
+	#Quantidade de livros
+	move $a0, $t3		     # indiceUser
+	jal calculateReturnDate
+	jal bufferInputToUser
+	
+	#Quebra de linha
+	la $a0, bufferUser
+	addi $a0, $a0, 67
+	li $t0, '\n'
+	sb $t0, 0($a0)
+	addi $s0, $s0,1
+	
+	#Mostrar Cadastro
+	la $a0, bufferUser
+	li $a1, 68
+	jal showBuffer
+	
+	la $a0, booksFile	     # parametros da função -> arquivo(saveData) 
+	la $a1, bufferUser	     # parametros da função -> buffer(saveData) 
+	li $a2, 68	 	     # parametros da função -> tamanhoString(saveData) 
+	jal saveData
+	
+	jal clearBufferUser
+	
+	lw $ra, 0($sp)       	     # recupera referencia do chamdaor
+	addi $sp, $sp, 4    
+	
+	j return
+calculateReturnDate:
+# parametro
+# $a0 -> endere�o da onde deve ser impresso (presica voltar 12 posi��es par apegar a data atual)
 # FUNCOES MUITO USADAS --------------------------------------------------------------------------------------------------------------------
 
 # FUNCOES COLOCAR CARACTER ------------------------------------------
